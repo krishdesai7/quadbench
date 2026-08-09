@@ -1,0 +1,322 @@
+$ numactl --cpunodebind=0 --membind=0 uv run bench_v2.py --sweep 500,4000,64000 -r 30 --tag cache
+numpy 2.5.1 on x86_64 / Linux-6.4.0-150600.23.103_15.0.27-cray_shasta_c-x86_64-with-glibc2.38
+  SIMD baseline (always active): ['X86_V2']
+  SIMD dispatch usable here:     ['X86_V3']
+  SIMD dispatch compiled in but NOT supported by this CPU: ['X86_V4', 'AVX512_ICL', 'AVX512_SPR']
+  13 dtypes, 10 ops, 30 repeats
+  running 516 tasks x 30 repeats (n=500) ...
+  warming up and calibrating ...
+  516 tasks, estimated 2.7 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=500 done, checkpointed to bench_cache.npz
+  running 516 tasks x 30 repeats (n=4000) ...
+  warming up and calibrating ...
+  516 tasks, estimated 4.4 s (0.1 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=4000 done, checkpointed to bench_cache.npz
+  running 516 tasks x 30 repeats (n=64000) ...
+  warming up and calibrating ...
+  516 tasks, estimated 44.0 s (0.7 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=64000 done, checkpointed to bench_cache.npz
+
+========================================================================================================
+ns per element, hot, out=  (operand KB per float64 array in header)
+========================================================================================================
+op                 dtype               16K        125K       2000K
+add                float16           6.260       6.055       5.998
+add                float32           0.328       0.146       0.249
+add                float64           0.481       0.292       0.651
+add                longdouble64      3.987       3.796       3.751
+add                quad-sleef       28.467      28.344      28.797
+add                int8              0.256       0.059       0.056
+add                uint8             0.259       0.060       0.058
+add                int16             0.272       0.089       0.127
+add                uint16            0.278       0.088       0.121
+add                int32             0.322       0.146       0.298
+add                uint32            0.325       0.145       0.283
+add                int64             0.476       0.284       0.682
+add                uint64            0.483       0.283       0.671
+mul                float16           6.259       6.053       6.017
+mul                float32           0.329       0.151       0.284
+mul                float64           0.479       0.297       0.647
+mul                longdouble64      3.992       3.802       3.763
+mul                quad-sleef       42.604      42.458      42.444
+mul                int8              0.270       0.062       0.058
+mul                uint8             0.267       0.064       0.058
+mul                int16             0.275       0.089       0.124
+mul                uint16            0.281       0.089       0.124
+mul                int32             0.328       0.148       0.277
+mul                uint32            0.336       0.146       0.258
+mul                int64             0.523       0.296       0.643
+mul                uint64            0.501       0.295       0.650
+div                float16           6.252       6.103       6.005
+div                float32           0.363       0.161       0.285
+div                float64           0.606       0.380       0.644
+div                longdouble64      3.979       3.798       3.789
+div                quad-sleef       77.280      77.217      78.028
+div                int8              1.344       0.799       0.836
+div                uint8             1.344       0.786       0.881
+div                int16             1.292       0.746       0.928
+div                uint16            1.310       0.747       0.868
+div                int32             1.305       0.770       0.928
+div                uint32            1.504       0.974       1.154
+div                int64             1.599       1.098       1.491
+div                uint64            1.884       1.360       1.600
+sqrt               float16           5.941       5.842       5.733
+sqrt               float32           0.566       0.388       0.374
+sqrt               float64           1.456       1.263       1.252
+sqrt               longdouble64      3.998       3.853       3.783
+sqrt               quad-sleef      104.996     104.567     105.936
+sqrt               int8              9.155       8.785       8.605
+sqrt               uint8             9.447       9.109       9.142
+sqrt               int16             0.980       0.513       0.510
+sqrt               uint16            0.979       0.513       0.498
+sqrt               int32             1.940       1.479       1.481
+sqrt               uint32            2.045       1.574       1.539
+sqrt               int64             2.077       1.638       1.717
+sqrt               uint64            2.234       1.783       1.796
+exp                float16           6.515       6.384       6.288
+exp                float32           1.367       1.194       1.458
+exp                float64           4.817       4.657       4.616
+exp                longdouble64     27.780      27.644      27.648
+exp                quad-sleef      122.409     122.222     123.712
+exp                int8             10.039       9.322       9.176
+exp                uint8            10.022       9.600       9.451
+exp                int16             1.775       1.341       1.366
+exp                uint16            1.769       1.339       1.439
+exp                int32             5.314       4.871       4.825
+exp                uint32            5.420       4.961       4.893
+exp                int64             5.473       5.029       5.071
+exp                uint64            5.608       5.155       5.124
+cos                float16           8.643       9.059       8.898
+cos                float32           1.687       1.515       1.630
+cos                float64           9.923      13.964      13.696
+cos                longdouble64    187.508     185.982     188.230
+cos                quad-sleef      135.765     135.669     136.858
+cos                int8             10.730      10.433      10.240
+cos                uint8            11.067      10.640      10.520
+cos                int16             2.151       1.658       1.677
+cos                uint16            2.097       1.656       1.710
+cos                int32            10.569      11.607      11.455
+cos                uint32           10.622      11.731      11.514
+cos                int64            10.682      11.775      11.701
+cos                uint64           10.815      11.961      11.782
+muladd             float16          12.527      12.121      12.012
+muladd             float32           0.707       0.305       0.582
+muladd             float64           0.949       0.618       1.462
+muladd             longdouble64      7.963       7.630       7.491
+muladd             quad-sleef       71.419      70.737      71.364
+muladd             int8              0.514       0.125       0.119
+muladd             uint8             0.514       0.123       0.116
+muladd             int16             0.541       0.181       0.266
+muladd             uint16            0.555       0.177       0.257
+muladd             int32             0.718       0.297       0.573
+muladd             uint32            0.690       0.293       0.559
+muladd             int64             0.975       0.627       1.416
+muladd             uint64            0.982       0.620       1.447
+muladd_accum       float16          12.513      12.118      12.016
+muladd_accum       float32           0.647       0.252       0.426
+muladd_accum       float64           0.866       0.502       1.177
+muladd_accum       longdouble64      7.958       7.613       7.485
+muladd_accum       quad-sleef       71.444      70.773      71.306
+muladd_accum       int8              0.500       0.111       0.091
+muladd_accum       uint8             0.515       0.118       0.089
+muladd_accum       int16             0.532       0.164       0.207
+muladd_accum       uint16            0.549       0.160       0.206
+muladd_accum       int32             0.611       0.267       0.429
+muladd_accum       uint32            0.644       0.262       0.470
+muladd_accum       int64             0.951       0.688       1.136
+muladd_accum       uint64            0.927       0.686       1.154
+matmul             float16          12.295      11.633      11.673
+matmul             float32          18.933      18.515      18.250
+matmul             float64          16.612      16.160      15.921
+matmul             longdouble64     11.700      11.285      11.135
+matmul             int8              3.558       3.041       2.984
+matmul             uint8             3.476       3.014       2.941
+matmul             int16             3.903       3.058       2.964
+matmul             uint16            3.679       3.212       3.144
+matmul             int32             3.843       3.060       2.982
+matmul             uint32            3.901       2.971       2.841
+matmul             int64             3.680       2.959       2.872
+matmul             uint64            3.661       3.081       3.028
+matmul_explicit    float16          23.084      19.830      19.241
+matmul_explicit    float32           5.751       2.671       2.829
+matmul_explicit    float64           6.406       3.617       4.362
+matmul_explicit    longdouble64     16.409      13.692      13.288
+matmul_explicit    quad-sleef      119.373     116.104     116.613
+matmul_explicit    int8              6.012       3.083       2.577
+matmul_explicit    uint8             6.053       3.058       2.566
+matmul_explicit    int16             6.032       3.076       2.607
+matmul_explicit    uint16            6.136       3.065       2.615
+matmul_explicit    int32             6.157       3.130       2.912
+matmul_explicit    uint32            6.237       3.131       2.934
+matmul_explicit    int64             6.622       3.522       4.360
+matmul_explicit    uint64            6.491       3.516       4.371
+
+========================================================================================================
+ns per element, cold, out=  (operand KB per float64 array in header)
+========================================================================================================
+op                 dtype               16K        125K       2000K
+add                float16           6.298       6.070       6.016
+add                float32           0.413       0.218       0.361
+add                float64           0.580       0.458       0.891
+add                longdouble64      4.067       3.831       3.752
+add                quad-sleef       28.579      28.319      28.587
+add                int8              0.291       0.079       0.085
+add                uint8             0.293       0.080       0.087
+add                int16             0.322       0.122       0.169
+add                uint16            0.324       0.129       0.174
+add                int32             0.407       0.238       0.374
+add                uint32            0.410       0.234       0.378
+add                int64             0.581       0.516       0.858
+add                uint64            0.577       0.501       0.811
+mul                float16           6.297       6.071       6.014
+mul                float32           0.412       0.218       0.375
+mul                float64           0.589       0.493       0.911
+mul                longdouble64      4.072       3.836       3.746
+mul                quad-sleef       42.723      42.493      42.790
+mul                int8              0.306       0.083       0.092
+mul                uint8             0.303       0.084       0.094
+mul                int16             0.322       0.123       0.171
+mul                uint16            0.327       0.126       0.171
+mul                int32             0.406       0.238       0.363
+mul                uint32            0.415       0.237       0.389
+mul                int64             0.598       0.572       0.876
+mul                uint64            0.592       0.543       0.910
+div                float16           6.293       6.088       6.019
+div                float32           0.423       0.224       0.395
+div                float64           0.641       0.482       0.908
+div                longdouble64      4.063       3.846       3.767
+div                quad-sleef       77.435      77.087      77.895
+div                int8              1.380       0.807       0.846
+div                uint8             1.378       0.803       0.877
+div                int16             1.333       0.774       0.929
+div                uint16            1.340       0.781       0.872
+div                int32             1.345       0.860       0.903
+div                uint32            1.545       1.038       1.178
+div                int64             1.646       1.319       1.471
+div                uint64            1.934       1.491       1.620
+sqrt               float16           5.971       5.812       5.715
+sqrt               float32           0.606       0.402       0.380
+sqrt               float64           1.495       1.289       1.250
+sqrt               longdouble64      4.068       3.873       3.786
+sqrt               quad-sleef      105.015     104.854     105.759
+sqrt               int8              9.187       8.769       8.711
+sqrt               uint8             9.484       9.053       8.893
+sqrt               int16             1.021       0.542       0.506
+sqrt               uint16            1.021       0.533       0.504
+sqrt               int32             1.980       1.530       1.487
+sqrt               uint32            2.088       1.610       1.556
+sqrt               int64             2.124       1.748       1.698
+sqrt               uint64            2.278       1.853       1.790
+exp                float16           6.551       6.385       6.299
+exp                float32           1.432       1.270       1.517
+exp                float64           4.860       4.674       4.601
+exp                longdouble64     27.810      27.622      27.557
+exp                quad-sleef      122.527     121.958     123.666
+exp                int8             10.077       9.326       9.172
+exp                uint8            10.057       9.637       9.450
+exp                int16             1.816       1.386       1.365
+exp                uint16            1.811       1.366       1.438
+exp                int32             5.359       4.917       4.837
+exp                uint32            5.463       4.983       4.907
+exp                int64             5.516       5.150       5.082
+exp                uint64            5.645       5.199       5.130
+cos                float16           9.237       9.016       8.892
+cos                float32           1.730       1.535       1.634
+cos                float64          14.212      13.939      13.703
+cos                longdouble64    186.759     186.546     187.609
+cos                quad-sleef      135.981     135.657     136.472
+cos                int8             10.864      10.426      10.437
+cos                uint8            11.149      10.681      10.518
+cos                int16             2.189       1.700       1.677
+cos                uint16            2.143       1.679       1.720
+cos                int32            12.122      11.664      11.458
+cos                uint32           12.267      11.746      11.523
+cos                int64            12.292      11.849      11.684
+cos                uint64           12.469      11.950      11.749
+muladd             float16          12.555      12.143      12.016
+muladd             float32           0.763       0.390       0.739
+muladd             float64           1.069       0.820       1.506
+muladd             longdouble64      8.053       7.644       7.468
+muladd             quad-sleef       71.310      70.794      71.352
+muladd             int8              0.555       0.141       0.143
+muladd             uint8             0.553       0.149       0.147
+muladd             int16             0.596       0.220       0.297
+muladd             uint16            0.609       0.218       0.300
+muladd             int32             0.737       0.397       0.748
+muladd             uint32            0.744       0.412       0.741
+muladd             int64             1.072       0.901       1.419
+muladd             uint64            1.072       0.835       1.411
+muladd_accum       float16          12.554      12.121      12.014
+muladd_accum       float32           0.708       0.338       0.518
+muladd_accum       float64           0.970       0.656       1.183
+muladd_accum       longdouble64      8.039       7.627       7.470
+muladd_accum       quad-sleef       71.328      70.704      71.213
+muladd_accum       int8              0.543       0.138       0.119
+muladd_accum       uint8             0.554       0.139       0.122
+muladd_accum       int16             0.588       0.202       0.242
+muladd_accum       uint16            0.596       0.199       0.242
+muladd_accum       int32             0.697       0.358       0.524
+muladd_accum       uint32            0.721       0.370       0.545
+muladd_accum       int64             1.025       0.812       1.176
+muladd_accum       uint64            1.005       0.775       1.129
+matmul             float16          12.345      11.626      11.686
+matmul             float32          18.970      18.456      18.228
+matmul             float64          16.620      16.114      15.924
+matmul             longdouble64     11.755      11.301      11.117
+matmul             int8              3.546       3.053       2.981
+matmul             uint8             3.538       3.023       2.944
+matmul             int16             3.904       3.053       2.964
+matmul             uint16            3.720       3.233       3.149
+matmul             int32             3.731       3.079       2.978
+matmul             uint32            3.783       2.974       2.839
+matmul             int64             3.656       2.988       2.869
+matmul             uint64            3.675       3.102       2.999
+matmul_explicit    float16          23.052      19.863      19.238
+matmul_explicit    float32           5.782       2.753       2.866
+matmul_explicit    float64           6.512       3.702       4.250
+matmul_explicit    longdouble64     16.442      13.791      13.232
+matmul_explicit    quad-sleef      118.970     115.971     116.507
+matmul_explicit    int8              6.065       3.042       2.577
+matmul_explicit    uint8             6.108       3.066       2.555
+matmul_explicit    int16             6.090       3.077       2.630
+matmul_explicit    uint16            6.178       3.082       2.622
+matmul_explicit    int32             6.199       3.191       2.935
+matmul_explicit    uint32            6.283       3.199       2.900
+matmul_explicit    int64             6.731       3.705       4.412
+matmul_explicit    uint64            6.603       3.690       4.422
+
+  Flat across sizes => ALU/latency bound. Rising with size => you have
+  fallen off a cache level and are measuring the memory system instead.
+
+saved run-by-run timings + metadata to bench_cache.npz
+keys are  n<N>__<op>__<dtype>__<alloc|out>__<hot|cold>
