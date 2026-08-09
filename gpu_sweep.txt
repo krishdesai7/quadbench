@@ -1,7 +1,7 @@
-$ uv run bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30 --tag sweep --with-ints
-  running 484 tasks x 30 repeats (n=20000) ...
+$ uv run bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30 --tag sweep
+  running 132 tasks x 30 repeats (n=20000) ...
   warming up and calibrating ...
-  484 tasks, estimated 2.4 s (0.0 min) of timed work
+  132 tasks, estimated 0.5 s (0.0 min) of timed work
   ... 3/30 repeats
   ... 6/30 repeats
   ... 9/30 repeats
@@ -13,9 +13,9 @@ $ uv run bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30 --tag sweep --
   ... 27/30 repeats
   ... 30/30 repeats
   n=20000 done, checkpointed to bench_sweep.npz
-  running 484 tasks x 30 repeats (n=250000) ...
+  running 132 tasks x 30 repeats (n=250000) ...
   warming up and calibrating ...
-  484 tasks, estimated 6.5 s (0.1 min) of timed work
+  132 tasks, estimated 0.8 s (0.0 min) of timed work
   ... 3/30 repeats
   ... 6/30 repeats
   ... 9/30 repeats
@@ -27,9 +27,9 @@ $ uv run bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30 --tag sweep --
   ... 27/30 repeats
   ... 30/30 repeats
   n=250000 done, checkpointed to bench_sweep.npz
-  running 484 tasks x 30 repeats (n=2500000) ...
+  running 132 tasks x 30 repeats (n=2500000) ...
   warming up and calibrating ...
-  484 tasks, estimated 46.2 s (0.8 min) of timed work
+  132 tasks, estimated 2.9 s (0.0 min) of timed work
   ... 3/30 repeats
   ... 6/30 repeats
   ... 9/30 repeats
@@ -41,8 +41,102 @@ $ uv run bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30 --tag sweep --
   ... 27/30 repeats
   ... 30/30 repeats
   n=2500000 done, checkpointed to bench_sweep.npz
+  running 132 tasks x 30 repeats (n=25000000) ...
+  warming up and calibrating ...
+  132 tasks, estimated 27.3 s (0.5 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=25000000 done, checkpointed to bench_sweep.npz
 cupy 14.1.1 on device 0: NVIDIA A100-SXM4-40GB (sm_8.0, 108 SMs)
   HBM 42.4 GB, 42.0 GB free, peak bandwidth 1555 GB/s
-  timer: event, 11 dtypes, 11 ops, 30 repeats
-operands would need 18.0 GB but only 22.1 GB is free on the device.
-Lower --budget-gb, --repeats, or -n.
+  timer: event, 3 dtypes, 11 ops, 30 repeats
+
+====================================================================================================
+ns per element, hot, out=  (elements per array in header)
+====================================================================================================
+op                       dtype             80,000    1,000,000   10,000,000  100,000,000
+add                      GPU fp16          0.1078       0.0092       0.0067       0.0059
+add                      GPU fp32          0.1081       0.0093       0.0098       0.0089
+add                      GPU fp64          0.1064       0.0098       0.0189       0.0178
+mul                      GPU fp16          0.1059       0.0097       0.0067       0.0059
+mul                      GPU fp32          0.1075       0.0093       0.0104       0.0089
+mul                      GPU fp64          0.1086       0.0100       0.0190       0.0177
+div                      GPU fp16          0.1038       0.0093       0.0067       0.0059
+div                      GPU fp32          0.1068       0.0093       0.0097       0.0089
+div                      GPU fp64          0.1063       0.0102       0.0190       0.0177
+sqrt                     GPU fp16          0.0961       0.0094       0.0066       0.0059
+sqrt                     GPU fp32          0.0984       0.0091       0.0068       0.0061
+sqrt                     GPU fp64          0.0960       0.0093       0.0125       0.0116
+exp                      GPU fp16          0.0956       0.0094       0.0066       0.0059
+exp                      GPU fp32          0.0957       0.0095       0.0068       0.0061
+exp                      GPU fp64          0.0962       0.0094       0.0124       0.0116
+cos                      GPU fp16          0.0973       0.0091       0.0066       0.0059
+cos                      GPU fp32          0.0940       0.0092       0.0070       0.0062
+cos                      GPU fp64          0.0938       0.0100       0.0127       0.0117
+muladd                   GPU fp16          0.2149       0.0184       0.0134       0.0118
+muladd                   GPU fp32          0.2109       0.0192       0.0195       0.0178
+muladd                   GPU fp64          0.2153       0.0264       0.0369       0.0354
+muladd_fused             GPU fp16          0.0875       0.0096       0.0066       0.0059
+muladd_fused             GPU fp32          0.0841       0.0092       0.0102       0.0089
+muladd_fused             GPU fp64          0.0849       0.0098       0.0189       0.0178
+matmul                   GPU fp16          1.3830       0.4676       0.5116       0.5071
+matmul                   GPU fp32          0.6542       0.5198       0.4935       0.4899
+matmul                   GPU fp64          1.0926       0.7458       0.7149       0.7118
+matmul_explicit          GPU fp16          1.6386       0.1330       0.0482       0.0384
+matmul_explicit          GPU fp32          1.6288       0.1340       0.0757       0.0666
+matmul_explicit          GPU fp64          1.6376       0.1343       0.1409       0.1317
+matmul_explicit_fused    GPU fp16          0.0629       0.0055       0.0051       0.0045
+matmul_explicit_fused    GPU fp32          0.0627       0.0071       0.0099       0.0089
+matmul_explicit_fused    GPU fp64          0.0657       0.0221       0.0192       0.0178
+
+====================================================================================================
+ns per element, cold, out=  (elements per array in header)
+====================================================================================================
+op                       dtype             80,000    1,000,000   10,000,000  100,000,000
+add                      GPU fp16          0.1106       0.0097       0.0068       0.0060
+add                      GPU fp32          0.1098       0.0102       0.0104       0.0089
+add                      GPU fp64          0.1108       0.0185       0.0190       0.0178
+mul                      GPU fp16          0.1086       0.0097       0.0067       0.0059
+mul                      GPU fp32          0.1086       0.0110       0.0104       0.0089
+mul                      GPU fp64          0.1076       0.0184       0.0190       0.0178
+div                      GPU fp16          0.1084       0.0097       0.0067       0.0059
+div                      GPU fp32          0.1072       0.0111       0.0103       0.0089
+div                      GPU fp64          0.1070       0.0174       0.0191       0.0177
+sqrt                     GPU fp16          0.0950       0.0094       0.0066       0.0059
+sqrt                     GPU fp32          0.0982       0.0095       0.0068       0.0061
+sqrt                     GPU fp64          0.0980       0.0109       0.0125       0.0116
+exp                      GPU fp16          0.0983       0.0093       0.0066       0.0059
+exp                      GPU fp32          0.0975       0.0094       0.0068       0.0061
+exp                      GPU fp64          0.0955       0.0103       0.0126       0.0116
+cos                      GPU fp16          0.0976       0.0099       0.0066       0.0059
+cos                      GPU fp32          0.0978       0.0096       0.0069       0.0062
+cos                      GPU fp64          0.0995       0.0118       0.0127       0.0116
+muladd                   GPU fp16          0.2148       0.0197       0.0134       0.0118
+muladd                   GPU fp32          0.2119       0.0203       0.0195       0.0178
+muladd                   GPU fp64          0.2133       0.0302       0.0368       0.0354
+muladd_fused             GPU fp16          0.0860       0.0096       0.0067       0.0059
+muladd_fused             GPU fp32          0.0893       0.0106       0.0102       0.0089
+muladd_fused             GPU fp64          0.0918       0.0175       0.0189       0.0177
+matmul                   GPU fp16          1.4270       0.4679       0.5117       0.5071
+matmul                   GPU fp32          0.7297       0.5235       0.4934       0.4898
+matmul                   GPU fp64          0.9500       0.7454       0.7156       0.7134
+matmul_explicit          GPU fp16          1.6144       0.1331       0.0483       0.0384
+matmul_explicit          GPU fp32          1.6442       0.1336       0.0756       0.0666
+matmul_explicit          GPU fp64          1.6156       0.1343       0.1409       0.1317
+matmul_explicit_fused    GPU fp16          0.0639       0.0070       0.0051       0.0045
+matmul_explicit_fused    GPU fp32          0.0643       0.0104       0.0099       0.0089
+matmul_explicit_fused    GPU fp64          0.0653       0.0264       0.0191       0.0178
+
+  Falling steeply with size => launch overhead dominated at small n.
+  Flattening => the GPU is saturated and you are reading real throughput.
+
+saved run-by-run timings + metadata to bench_sweep.npz
+keys are  n<N>__<op>__<dtype>__<alloc|out>__<hot|cold>
