@@ -2,7 +2,6 @@
 name = "quadbench"
 version = "0.1.0"
 description = "Add your description here"
-readme = "README.md"
 authors = [
     { name = "krishdesai7", email = "27725015+krishdesai7@users.noreply.github.com" }
 ]
@@ -13,10 +12,3 @@ dependencies = [
     "numpy-quaddtype>=1.0.0",
     "pyyaml>=6.0.3",
 ]
-
-[project.scripts]
-quadbench = "quadbench:main"
-
-[build-system]
-requires = ["uv_build>=0.12.1,<0.13.0"]
-build-backend = "uv_build"

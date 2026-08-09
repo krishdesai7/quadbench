@@ -1,0 +1,149 @@
+$ numactl --cpunodebind=0 --membind=0 uv run bench_v2.py -n 2000000 -r 20 --dtypes float32,float64,int32,int64 --max-call-ms 50 --budget-gb 8 --tag dram
+  running 160 tasks x 20 repeats (n=2000000) ...
+  warming up and calibrating ...
+  skipping 7 (op, dtype) cells over --max-call-ms=50:
+    matmul             float32           147.66 ms/call
+    matmul             float64           133.34 ms/call
+    cos                float64           115.41 ms/call
+    cos                int64              97.12 ms/call
+    cos                int32              95.01 ms/call
+    matmul_explicit    int64              67.56 ms/call
+    matmul_explicit    float64            66.66 ms/call
+  136 tasks, estimated 42.0 s (0.7 min) of timed work
+  ... 2/20 repeats
+  ... 4/20 repeats
+  ... 6/20 repeats
+  ... 8/20 repeats
+  ... 10/20 repeats
+  ... 12/20 repeats
+  ... 14/20 repeats
+  ... 16/20 repeats
+  ... 18/20 repeats
+  ... 20/20 repeats
+numpy 2.5.1 on x86_64 / Linux-6.4.0-150600.23.103_15.0.27-cray_shasta_c-x86_64-with-glibc2.38
+  SIMD baseline (always active): ['X86_V2']
+  SIMD dispatch usable here:     ['X86_V3']
+  SIMD dispatch compiled in but NOT supported by this CPU: ['X86_V4', 'AVX512_ICL', 'AVX512_SPR']
+  4 dtypes, 10 ops, 20 repeats
+
+  shape (2000000, 2, 2) = 8000000 elements (62500 KB per float64 operand), footprint 64.00 GB
+
+========================================================================================================
+validation: 44/44 passed
+========================================================================================================
+  all ops produce results matching a float64 reference
+
+========================================================================================================
+add
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32         3575.01    3486.48    3651.83    3813.20     0.447      326.71       27.5
+float64        float64         7178.59    7098.41   10343.33   10338.40     0.897     3240.00       27.0
+int32          int32           3503.09    3547.96    4552.36    3631.09     0.438       83.14       27.1
+int64          int64           7141.93    6936.76   10215.98   10354.57     0.893     3417.82       27.7
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+mul
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32         3588.63    3523.41    3561.52    4467.01     0.449      943.60       27.2
+float64        float64         7070.20    7006.37   10531.76   10227.19     0.884     3220.81       27.4
+int32          int32           3504.02    3636.69    4569.30    3500.67     0.438     -136.03       26.4
+int64          int64           7022.32    6997.07   10539.77   10523.45     0.878     3526.39       27.4
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+div
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32         3746.81    3707.48    3792.65    5174.36     0.468     1466.87       25.9
+float64        float64         7073.90    7062.70   10316.50   10629.50     0.884     3566.80       27.2
+int32          float64   <-    6992.76    6921.40   11580.23   11614.50     0.874     4693.10       18.5
+int64          float64   <-    9980.66   10042.53   14759.58   14732.02     1.248     4689.49       19.1
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+sqrt
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32         2941.57    2942.24    2975.84    3046.41     0.368      104.18       21.8
+float64        float64        10012.37   10143.79   15749.25   15682.38     1.252     5538.59       12.6
+int32          float64   <-   11834.71   11813.36   17471.49   17513.47     1.479     5700.11        8.1
+int64          float64   <-   13649.80   13590.64   19171.21   19107.32     1.706     5516.68        9.4
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+exp
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32         9737.47    9653.11    9944.26    9876.38     1.217      223.27        6.6
+float64        float64        37277.63   37116.84   42844.00   42766.00     4.660     5649.16        3.4
+int32          float64   <-   38903.33   38912.30   44537.98   44526.25     4.863     5613.95        2.5
+int64          float64   <-   40748.21   40620.50   45951.85   46090.25     5.094     5469.76        3.2
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+cos
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32        12187.65   12000.10   14737.03   14701.41     1.523     2701.31        5.3
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+muladd
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32         6903.69    6944.32    8612.99    8594.58     0.863     1650.26       13.8
+float64        float64        13885.10   13683.12   19831.18   19647.31     1.736     5964.19       14.0
+int32          int32           6920.28    6894.19    9227.33    8803.89     0.865     1909.70       13.9
+int64          int64          13773.29   13712.47   19909.27   19904.25     1.722     6191.78       14.0
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+muladd_accum
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32         5868.25    5718.57    9673.06    9618.52     0.734     3899.94       16.8
+float64        float64        11734.64   11767.77   19744.85   19548.05     1.467     7780.27       16.3
+int32          int32           5937.75    5858.31    9688.63    8736.53     0.742     2878.22       16.4
+int64          int64          11938.11   11721.83   19788.32   19951.03     1.492     8229.20       16.4
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+matmul
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+int32          int32          23947.17   23814.64   24293.26   26682.93     2.993     2868.29        4.0
+int64          int64          26276.39   26003.52   37098.55   31753.83     3.285     5750.31        7.4
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+matmul_explicit
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float32        float32        27770.31   27798.25   29456.29   29153.04     3.471     1354.79        3.5
+float64        float64        46965.80   46975.78        nan        nan     5.871         nan        4.1
+int32          int32          28268.69   28288.94   29574.46   31493.12     3.534     3204.18        3.4
+int64          int64          47274.04   47605.03        nan        nan     5.909         nan        4.0
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+precision scaling on cache-resident data (hot, out=), median us
+========================================================================================================
+op                        float32        float64   f64/f32
+add                       3575.01        7178.59      2.01
+mul                       3588.63        7070.20      1.97
+div                       3746.81        7073.90      1.89
+sqrt                      2941.57       10012.37      3.40
+exp                       9737.47       37277.63      3.83
+cos                      12187.65            nan       nan
+muladd                    6903.69       13885.10      2.01
+muladd_accum              5868.25       11734.64      2.00
+matmul_explicit          27770.31       46965.80      1.69
+
+  f64/f32 near 2.0 => both paths vectorised, cost tracks lane count.
+  f64/f32 well above 2.0 => the float64 loop is falling back to scalar libm.
+
+saved run-by-run timings + metadata to bench_dram.npz
+keys are  <op>__<dtype>__<alloc|out>__<hot|cold>

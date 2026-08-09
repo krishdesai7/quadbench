@@ -1,4 +1,4 @@
-$ numactl --cpunodebind=0 --membind=0 uv run bench_v2.py --sweep 500,4000,64000 -r 30 --tag cache
+$ numactl --cpunodebind=0 --membind=0 uv run bench_v2.py --sweep 500,4000,64000 -r 30 --tag cache &
 numpy 2.5.1 on x86_64 / Linux-6.4.0-150600.23.103_15.0.27-cray_shasta_c-x86_64-with-glibc2.38
   SIMD baseline (always active): ['X86_V2']
   SIMD dispatch usable here:     ['X86_V3']

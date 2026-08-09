@@ -1,0 +1,48 @@
+$ uv run bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30 --tag sweep --with-ints
+  running 484 tasks x 30 repeats (n=20000) ...
+  warming up and calibrating ...
+  484 tasks, estimated 2.4 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=20000 done, checkpointed to bench_sweep.npz
+  running 484 tasks x 30 repeats (n=250000) ...
+  warming up and calibrating ...
+  484 tasks, estimated 6.5 s (0.1 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=250000 done, checkpointed to bench_sweep.npz
+  running 484 tasks x 30 repeats (n=2500000) ...
+  warming up and calibrating ...
+  484 tasks, estimated 46.2 s (0.8 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2500000 done, checkpointed to bench_sweep.npz
+cupy 14.1.1 on device 0: NVIDIA A100-SXM4-40GB (sm_8.0, 108 SMs)
+  HBM 42.4 GB, 42.0 GB free, peak bandwidth 1555 GB/s
+  timer: event, 11 dtypes, 11 ops, 30 repeats
+operands would need 18.0 GB but only 22.1 GB is free on the device.
+Lower --budget-gb, --repeats, or -n.
