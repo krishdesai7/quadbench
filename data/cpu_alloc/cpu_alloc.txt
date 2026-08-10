@@ -1,0 +1,130 @@
+$ numactl --cpunodebind=0 --membind=0 uv run bench_v2.py --sweep 4000,16000,64000,256000,1000000,2000000 --dtypes float32,float64,int32,int64 --ops add,mul,exp -r 30 --budget-gb 8 --out-pool-gb 2.0 --tag alloc
+  running 72 tasks x 30 repeats (n=4000) ...
+  warming up and calibrating ...
+  72 tasks, estimated 0.4 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=4000 done, checkpointed to bench_alloc.npz
+  running 72 tasks x 30 repeats (n=16000) ...
+  warming up and calibrating ...
+  72 tasks, estimated 0.4 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=16000 done, checkpointed to bench_alloc.npz
+  running 72 tasks x 30 repeats (n=64000) ...
+  warming up and calibrating ...
+  72 tasks, estimated 0.9 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=64000 done, checkpointed to bench_alloc.npz
+  running 72 tasks x 30 repeats (n=256000) ...
+  warming up and calibrating ...
+  72 tasks, estimated 3.5 s (0.1 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=256000 done, checkpointed to bench_alloc.npz
+  running 72 tasks x 30 repeats (n=1000000) ...
+  warming up and calibrating ...
+  72 tasks, estimated 14.1 s (0.2 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=1000000 done, checkpointed to bench_alloc.npz
+  running 72 tasks x 30 repeats (n=2000000) ...
+  warming up and calibrating ...
+  72 tasks, estimated 30.7 s (0.5 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2000000 done, checkpointed to bench_alloc.npz
+numpy 2.5.1 on x86_64 / Linux-6.4.0-150600.23.103_15.0.27-cray_shasta_c-x86_64-with-glibc2.38
+  SIMD baseline (always active): ['X86_V2']
+  SIMD dispatch usable here:     ['X86_V3']
+  SIMD dispatch compiled in but NOT supported by this CPU: ['X86_V4', 'AVX512_ICL', 'AVX512_SPR']
+  4 dtypes, 3 ops, 30 repeats
+
+========================================================================================================
+ns per element, hot, out=  (operand KB per float64 array in header)
+========================================================================================================
+op                 dtype              125K        500K       2000K       8000K      31250K      62500K
+add                float32           0.145       0.191       0.231       0.415       0.430       0.432
+add                float64           0.297       0.418       0.590       0.871       0.848       0.865
+add                int32             0.150       0.206       0.217       0.433       0.432       0.430
+add                int64             0.297       0.425       0.605       0.842       0.857       0.867
+mul                float32           0.148       0.189       0.239       0.454       0.436       0.433
+mul                float64           0.295       0.420       0.539       0.842       0.849       0.869
+mul                int32             0.150       0.194       0.227       0.431       0.428       0.432
+mul                int64             0.287       0.412       0.530       0.844       0.845       0.859
+exp                float32           1.170       1.258       1.324       1.340       1.202       1.188
+exp                float64           4.638       4.609       4.589       4.596       4.592       4.621
+exp                int32             4.888       4.784       4.772       4.807       4.820       4.830
+exp                int64             5.033       4.927       4.993       5.016       5.028       5.069
+
+========================================================================================================
+ns per element, cold, out=  (operand KB per float64 array in header)
+========================================================================================================
+op                 dtype              125K        500K       2000K       8000K      31250K      62500K
+add                float32           0.195       0.259       0.347       0.425       0.427       0.429
+add                float64           0.426       0.604       0.688       0.863       0.855       0.859
+add                int32             0.214       0.277       0.336       0.415       0.425       0.435
+add                int64             0.474       0.598       0.679       0.851       0.858       0.865
+mul                float32           0.197       0.271       0.366       0.467       0.433       0.433
+mul                float64           0.429       0.582       0.719       0.874       0.858       0.870
+mul                int32             0.211       0.281       0.366       0.431       0.433       0.431
+mul                int64             0.485       0.650       0.589       0.860       0.850       0.847
+exp                float32           1.198       1.357       1.449       1.268       1.192       1.184
+exp                float64           4.642       4.609       4.590       4.593       4.610       4.620
+exp                int32             4.906       4.830       4.838       4.808       4.802       4.829
+exp                int64             5.082       5.050       5.012       5.027       5.031       5.059
+
+  Flat across sizes => ALU/latency bound. Rising with size => you have
+  fallen off a cache level and are measuring the memory system instead.
+
+saved run-by-run timings + metadata to bench_alloc.npz
+keys are  n<N>__<op>__<dtype>__<alloc|out|out_pool>__<hot|cold>

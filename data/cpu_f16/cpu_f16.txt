@@ -1,0 +1,84 @@
+$ numactl --cpunodebind=0 --membind=0 uv run bench_v2.py --sweep 4000,64000,1000000 --dtypes float16,float32,float64 --ops add,mul,exp,add_via_f32,mul_via_f32,exp_via_f32 -r 30 --budget-gb 4 --tag f16
+Downloading cpython-3.14.6-linux-x86_64-gnu (download) (34.2MiB)
+ Downloaded cpython-3.14.6-linux-x86_64-gnu (download)
+  running 54 tasks x 30 repeats (n=4000) ...
+  warming up and calibrating ...
+  54 tasks, estimated 0.3 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=4000 done, checkpointed to bench_f16.npz
+  running 54 tasks x 30 repeats (n=64000) ...
+  warming up and calibrating ...
+  54 tasks, estimated 1.3 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=64000 done, checkpointed to bench_f16.npz
+  running 54 tasks x 30 repeats (n=1000000) ...
+  warming up and calibrating ...
+  54 tasks, estimated 21.3 s (0.4 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=1000000 done, checkpointed to bench_f16.npz
+numpy 2.5.1 on x86_64 / Linux-6.4.0-150600.23.103_15.0.27-cray_shasta_c-x86_64-with-glibc2.38
+  SIMD baseline (always active): ['X86_V2']
+  SIMD dispatch usable here:     ['X86_V3']
+  SIMD dispatch compiled in but NOT supported by this CPU: ['X86_V4', 'AVX512_ICL', 'AVX512_SPR']
+  3 dtypes, 6 ops, 30 repeats
+
+========================================================================================================
+ns per element, hot, out=  (operand KB per float64 array in header)
+========================================================================================================
+op                 dtype              125K       2000K      31250K
+add                float16           6.081       6.007       6.060
+add                float32           0.144       0.197       0.429
+add                float64           0.286       0.450       0.866
+mul                float16           6.082       6.010       6.038
+mul                float32           0.142       0.203       0.438
+mul                float64           0.283       0.428       0.856
+exp                float16           6.357       6.279       6.324
+exp                float32           1.188       1.302       1.190
+exp                float64           4.627       4.596       4.637
+
+========================================================================================================
+ns per element, cold, out=  (operand KB per float64 array in header)
+========================================================================================================
+op                 dtype              125K       2000K      31250K
+add                float16           6.049       6.004       6.042
+add                float32           0.190       0.307       0.436
+add                float64           0.386       0.609       0.863
+mul                float16           6.055       6.000       6.042
+mul                float32           0.185       0.299       0.440
+mul                float64           0.366       0.673       0.866
+exp                float16           6.345       6.279       6.325
+exp                float32           1.205       1.386       1.190
+exp                float64           4.629       4.587       4.626
+
+  Flat across sizes => ALU/latency bound. Rising with size => you have
+  fallen off a cache level and are measuring the memory system instead.
+
+saved run-by-run timings + metadata to bench_f16.npz
+keys are  n<N>__<op>__<dtype>__<alloc|out>__<hot|cold>

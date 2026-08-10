@@ -1,0 +1,218 @@
+$ uv run bench_gpu.py --sweep 250,500,1000,2500,5000,10000,25000,50000,100000,250000,500000,1000000,2500000,6250000,25000000,62500000 --ops add,mul,exp,matmul -r 30 --budget-gb 8 --tag gpudense
+Downloading cpython-3.14.6-linux-x86_64-gnu (download) (34.2MiB)
+ Downloaded cpython-3.14.6-linux-x86_64-gnu (download)
+  running 36 tasks x 30 repeats (n=250) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=250 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=500) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=500 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=1000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=1000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=2500) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2500 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=5000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=5000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=10000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=10000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=25000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=25000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=50000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=50000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=100000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=100000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=250000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=250000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=500000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=500000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=1000000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=1000000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=2500000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2500000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=6250000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 0.3 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=6250000 done, checkpointed to bench_gpudense.npz
+  running 36 tasks x 30 repeats (n=25000000) ...
+  warming up and calibrating ...
+  36 tasks, estimated 1.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=25000000 done, checkpointed to bench_gpudense.npz
+cupy 14.1.1 on device 0: NVIDIA A100-SXM4-40GB (sm_8.0, 108 SMs)
+  HBM 42.4 GB, 42.0 GB free, peak bandwidth 1555 GB/s
+  timer: event, 3 dtypes, 4 ops, 30 repeats
+operands would need 14.0 GB but only 1.7 GB is free on the device.
+Lower --budget-gb, --repeats, or -n.

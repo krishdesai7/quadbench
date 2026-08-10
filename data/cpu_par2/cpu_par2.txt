@@ -1,0 +1,45 @@
+$ numactl --physcpubind=2 --membind=0 uv run bench_v2.py -n 2000000 -r 10 --dtypes float64 --ops add --budget-gb 2 --tag par2
+  running 4 tasks x 10 repeats (n=2000000) ...
+  warming up and calibrating ...
+  4 tasks, estimated 1.0 s (0.0 min) of timed work
+  ... 1/10 repeats
+  ... 2/10 repeats
+  ... 3/10 repeats
+  ... 4/10 repeats
+  ... 5/10 repeats
+  ... 6/10 repeats
+  ... 7/10 repeats
+  ... 8/10 repeats
+  ... 9/10 repeats
+  ... 10/10 repeats
+numpy 2.5.1 on x86_64 / Linux-6.4.0-150600.23.103_15.0.27-cray_shasta_c-x86_64-with-glibc2.38
+  SIMD baseline (always active): ['X86_V2']
+  SIMD dispatch usable here:     ['X86_V3']
+  SIMD dispatch compiled in but NOT supported by this CPU: ['X86_V4', 'AVX512_ICL', 'AVX512_SPR']
+  1 dtypes, 1 ops, 10 repeats
+
+  shape (2000000, 2, 2) = 8000000 elements (62500 KB per float64 operand), footprint 1.28 GB
+
+========================================================================================================
+validation: 1/1 passed
+========================================================================================================
+  all ops produce results matching a float64 reference
+
+========================================================================================================
+add
+========================================================================================================
+dtype          ->result       hot out=  cold out=  hot alloc cold alloc   ns/elem  alloc cost  cold GB/s
+float64        float64        18862.09   20301.71   33238.66   29713.65     2.358     9411.94        9.5
+  '<-' marks a dtype numpy promoted before computing: that row is the promoted type's cost, not the input type's.
+
+========================================================================================================
+precision scaling on cache-resident data (hot, out=), median us
+========================================================================================================
+op                        float64   f64/f32
+add                      18862.09       nan
+
+  f64/f32 near 2.0 => both paths vectorised, cost tracks lane count.
+  f64/f32 well above 2.0 => the float64 loop is falling back to scalar libm.
+
+saved run-by-run timings + metadata to bench_par2.npz
+keys are  <op>__<dtype>__<alloc|out>__<hot|cold>
