@@ -6,6 +6,8 @@ Fixes over v1:
   * Preallocated `out=` buffers, so arithmetic is timed instead of malloc.
     Both allocating and out= variants are measured, so the allocation cost
     is a reported quantity rather than a confounder.
+  * Optional third destination mode, `out_pool` (--out-pool-gb). See "the
+    allocation question" below.
   * hot/cold axis. `hot` reuses one operand pair (cache-resident -> ALU/SIMD
     bound). `cold` cycles distinct pairs (streaming -> bandwidth bound).
     v1 only had `cold`, which is why add/mul/div all pinned to ~50 GB/s.
@@ -21,6 +23,30 @@ Fixes over v1:
   * Result dtype recorded, so integer rows that silently promote to float
     (int8->float16, int16->float32, int32+->float64 for sqrt/exp/cos) are
     labelled instead of being read as integer performance.
+
+On the allocation question. `alloc` minus `out` was meant to price the
+allocator, but at large n it goes negative -- the allocating form is faster --
+and that difference confounds two things that move in opposite directions:
+
+  1. the allocator itself: mmap/munmap bookkeeping plus a first-touch page
+     fault per page of a freshly mapped result, which costs the alloc form;
+  2. the destination's cache state: `out` rewrites one buffer every call, so
+     once that buffer exceeds cache, each store pulls the old line in from
+     DRAM before overwriting it (read-for-ownership). A freshly mapped page
+     has no old contents to fetch, which pays the alloc form back.
+
+`out_pool` separates them. It cycles the destination through a pool of
+preallocated, already-faulted buffers whose total size is set by
+--out-pool-gb; make that comfortably larger than L3 and the destination is
+cache-cold on every call while no allocation and no page faults occur. Then:
+
+    out_pool - out    = the cost of a cache-cold destination (hypothesis 2)
+    alloc    - out_pool = the cost of allocating and faulting it (hypothesis 1)
+
+If read-for-ownership explains the sign flip, out_pool should be the slowest
+of the three and alloc - out_pool should stay positive at every size. The pool
+is shared between (op, dtype) cells with the same result dtype and shape, so
+the memory cost is per distinct result buffer shape, not per cell.
 
 On "how much does the vectorised path buy me": the intended instrument is the
 float32/float64 ratio within a single run. Both dtypes take the same code path
@@ -133,7 +159,7 @@ def matmul_2x2_explicit_out(a, b, o, t):
     return o
 
 
-OPS = {
+OPS: dict[str, tuple[Any, Any, Any]] = {
     # name              alloc                          out=                                                    temp
     "add":              (lambda a, b: a + b,           lambda a, b, o, t: np.add(a, b, out=o),                 None),
     "mul":              (lambda a, b: a * b,           lambda a, b, o, t: np.multiply(a, b, out=o),            None),
@@ -150,6 +176,38 @@ OPS = {
     "matmul":           (lambda a, b: a @ b,           lambda a, b, o, t: np.matmul(a, b, out=o),              None),
     "matmul_explicit":  (matmul_2x2_explicit,          matmul_2x2_explicit_out,                                "stack5"),
 }
+
+
+def via_f32(ufunc, unary=False):
+    """The same op done by hand at float32 or wider, then narrowed back.
+
+    Only meant to be informative for float16, where numpy's own loop already
+    computes in float32 internally: if doing the widening explicitly is FASTER
+    than the native float16 ufunc, then what float16 costs is the ufunc's inner
+    loop, not the conversion itself -- this CPU has F16C, which converts eight
+    halves per instruction. For float32 and wider, promote_types makes the
+    widening a no-op, so these rows reduce to the plain op and stay valid
+    against the float64 reference.
+
+    Allocating form only. The out= form would need float32 scratch, and every
+    temp in this harness is allocated at the result dtype.
+    """
+    def run(a, b):
+        w = np.promote_types(a.dtype, np.float32)
+        wide = ufunc(a.astype(w)) if unary else ufunc(a.astype(w), b.astype(w))
+        return wide.astype(a.dtype)
+    return run
+
+
+# Excluded from the default op set: these exist to answer one question about
+# float16 and would otherwise change what every previous invocation measures.
+VIA_F32_OPS = {
+    "add_via_f32": (via_f32(np.add), None, None),
+    "mul_via_f32": (via_f32(np.multiply), None, None),
+    "exp_via_f32": (via_f32(np.exp, unary=True), None, None),
+}
+DEFAULT_OPS = list(OPS)
+OPS.update(VIA_F32_OPS)
 
 
 # --------------------------------------------------------------------------
@@ -264,6 +322,7 @@ class Task:
         self.pairs: list = []
         self.out = None
         self.tmp = None
+        self.outs: list = []   # (out, tmp) pool, out_pool mode only
         self.n_elem = 0
         self.res_dtype = ""
         self.res_itemsize = 0
@@ -272,32 +331,56 @@ class Task:
         self.est_us = 0.0
         self.est_sample_us = 0.0
 
+    def touches(self):
+        """How many distinct calls it takes to touch every operand pair and, in
+        out_pool mode, every destination buffer. The warm-up sweep uses this so
+        no timed pass is charged for a first-touch fault."""
+        return max(len(self.pairs), len(self.outs))
+
     def call(self, i):
         a, b = self.pairs[0] if self.locality == "hot" else self.pairs[i % len(self.pairs)]
         if self.mode == "alloc":
             return self.fn(a, b)
+        if self.mode == "out_pool":
+            o, t = self.outs[i % len(self.outs)]
+            return self.fn(a, b, o, t)
         return self.fn(a, b, self.out, self.tmp)
 
     def sample(self, base):
         """One timed sample = `inner` back-to-back calls, so that per-call Python
         and perf_counter overhead (~0.5-2 us) does not dominate at small N."""
         fn, inner, npairs = self.fn, self.inner, len(self.pairs)
-        if self.locality == "hot":
+        hot = self.locality == "hot"
+        if hot:
             a, b = self.pairs[0]
-            if self.mode == "alloc":
+
+        if self.mode == "alloc":
+            if hot:
                 for _ in range(inner):
                     fn(a, b)
             else:
-                o, t = self.out, self.tmp
-                for _ in range(inner):
-                    fn(a, b, o, t)
-        else:
-            if self.mode == "alloc":
                 for k in range(inner):
                     a, b = self.pairs[(base + k) % npairs]
                     fn(a, b)
+        elif self.mode == "out_pool":
+            # destination cycles too, so it is cache-cold on every call while
+            # staying mapped and already faulted
+            outs, nouts = self.outs, len(self.outs)
+            if hot:
+                for k in range(inner):
+                    o, t = outs[(base + k) % nouts]
+                    fn(a, b, o, t)
             else:
-                o, t = self.out, self.tmp
+                for k in range(inner):
+                    a, b = self.pairs[(base + k) % npairs]
+                    o, t = outs[(base + k) % nouts]
+                    fn(a, b, o, t)
+        else:
+            o, t = self.out, self.tmp
+            if hot:
+                for _ in range(inner):
+                    fn(a, b, o, t)
+            else:
                 for k in range(inner):
                     a, b = self.pairs[(base + k) % npairs]
                     fn(a, b, o, t)
@@ -331,14 +414,46 @@ def pairs_for_budget(shape, dtype, budget_bytes, cap):
     return int(max(2, min(cap, budget_bytes // max(per_pair, 1))))
 
 
-def build_tasks(dtypes, op_names, shape, repeats, rng, seed, budget_bytes):
+MAX_POOL = 64  # enough to clear any L3 at the sizes this runs at
+
+
+def build_out_pool(res_dtype, res_shape, tmp_shape, pool_bytes, cache):
+    """A pool of preallocated destination buffers, cycled so the destination is
+    cache-cold without being freshly allocated.
+
+    Keyed on (result dtype, result shape, temp shape) and shared between cells,
+    because that is all a destination buffer depends on -- 6 ops x 4 dtypes
+    would otherwise want 24 pools of the same few shapes.
+    """
+    key = (str(res_dtype), tuple(res_shape), tmp_shape and tuple(tmp_shape))
+    if key in cache:
+        return cache[key]
+
+    entry = int(np.prod(res_shape)) * res_dtype.itemsize
+    if tmp_shape is not None:
+        entry += int(np.prod(tmp_shape)) * res_dtype.itemsize
+    n_pool = int(max(2, min(MAX_POOL, pool_bytes // max(entry, 1))))
+
+    pool = [(np.empty(res_shape, dtype=res_dtype),
+             np.empty(tmp_shape, dtype=res_dtype) if tmp_shape is not None else None)
+            for _ in range(n_pool)]
+    cache[key] = pool
+    return pool
+
+
+def build_tasks(dtypes, op_names, shape, repeats, rng, seed, budget_bytes,
+                pool_bytes=0):
     """Allocate buffers, validate, and return the runnable task list.
 
     `budget_bytes` is a TOTAL across every dtype, split evenly. Applying it per
     dtype is how v1's footprint got away from us: 4 GB each across 13 dtypes is
     52 GB, not 4 GB.
+
+    `pool_bytes` is per distinct destination pool and enables the out_pool mode;
+    0 leaves the run exactly as it was before that mode existed.
     """
     tasks, reports = [], []
+    pool_cache: dict = {}
     per_dtype_budget = max(1, budget_bytes // max(len(dtypes), 1))
 
     for dtype_name, dtype in dtypes.items():
@@ -365,11 +480,12 @@ def build_tasks(dtypes, op_names, shape, repeats, rng, seed, budget_bytes):
             out_buf = np.empty(res_shape, dtype=res_dtype)
 
             if temp_kind == "like_out":
-                tmp = np.empty(res_shape, dtype=res_dtype)
+                tmp_shape = res_shape
             elif temp_kind == "stack5":
-                tmp = np.empty((5, shape[0]), dtype=res_dtype)
+                tmp_shape = (5, shape[0])
             else:
-                tmp = None
+                tmp_shape = None
+            tmp = np.empty(tmp_shape, dtype=res_dtype) if tmp_shape else None
 
             # out= form has to produce the same answer as the allocating form
             out_ok = True
@@ -389,8 +505,17 @@ def build_tasks(dtypes, op_names, shape, repeats, rng, seed, budget_bytes):
                                     "note": f"raised {type(exc).__name__}: {exc}",
                                     "err": 0.0, "res_dtype": ""})
 
+            # muladd_accum's real destination is the temp, not `o`, so the pool
+            # has to cycle both for it to be a cold-destination measurement
+            pool = (build_out_pool(res_dtype, res_shape, tmp_shape, pool_bytes,
+                                   pool_cache)
+                    if pool_bytes > 0 and out_ok and out_fn is not None else [])
+
             n_elem = int(np.prod(shape))
-            for mode, fn in (("alloc", alloc_fn), ("out", out_fn if out_ok else None)):
+            modes = [("alloc", alloc_fn), ("out", out_fn if out_ok else None)]
+            if pool:
+                modes.append(("out_pool", out_fn))
+            for mode, fn in modes:
                 if fn is None:
                     continue
                 for locality in ("hot", "cold"):
@@ -400,6 +525,7 @@ def build_tasks(dtypes, op_names, shape, repeats, rng, seed, budget_bytes):
                     t.pairs = pairs
                     t.out = out_buf
                     t.tmp = tmp
+                    t.outs = pool if mode == "out_pool" else []
                     t.n_elem = n_elem
                     t.res_dtype = str(res_dtype)
                     t.res_itemsize = res_dtype.itemsize
@@ -407,7 +533,9 @@ def build_tasks(dtypes, op_names, shape, repeats, rng, seed, budget_bytes):
                     tasks.append(t)
 
     random.Random(seed).shuffle(tasks)
-    return tasks, reports
+    pool_bytes_total = sum(o.nbytes + (t.nbytes if t is not None else 0)
+                           for pool in pool_cache.values() for o, t in pool)
+    return tasks, reports, pool_bytes_total
 
 
 def run(tasks, repeats, seed, target_us, max_call_ms=0.0):
@@ -419,7 +547,7 @@ def run(tasks, repeats, seed, target_us, max_call_ms=0.0):
     # for first-touch faults -- v1's `add` row was almost entirely this.
     print("  warming up and calibrating ...", file=sys.stderr)
     for t in tasks:
-        for i in range(len(t.pairs)):
+        for i in range(t.touches()):
             t.call(i)
         t.calibrate(target_us)
 
@@ -518,6 +646,29 @@ def report(tasks, times, dtypes, op_names, n_elem):
     print("\n  f64/f32 near 2.0 => both paths vectorised, cost tracks lane count.")
     print("  f64/f32 well above 2.0 => the float64 loop is falling back to scalar libm.")
 
+    # ---- where the allocation difference actually comes from ---------------
+    if not any(t.mode == "out_pool" for t in tasks):
+        return
+    print(f"\n{'=' * 104}\ndestination cost decomposition (cold operands), "
+          f"median us\n{'=' * 104}")
+    print(f"{'op':18s} {'dtype':14s} {'out=':>10s} {'out_pool':>10s} {'alloc':>10s} "
+          f"{'cold dest':>11s} {'allocation':>11s} {'alloc-out':>10s}")
+    for op in op_names:
+        for dt in dtypes:
+            o = get(op, dt, "out", "cold")
+            p_ = get(op, dt, "out_pool", "cold")
+            a = get(op, dt, "alloc", "cold")
+            if np.isnan(o) or np.isnan(p_):
+                continue
+            print(f"{op:18s} {dt:14s} {o:10.2f} {p_:10.2f} {a:10.2f} "
+                  f"{p_ - o:11.2f} {a - p_:11.2f} {a - o:10.2f}")
+    print("\n  'cold dest' = out_pool - out=   : cost of a destination that has")
+    print("      fallen out of cache but is still mapped (read-for-ownership).")
+    print("  'allocation' = alloc - out_pool : cost of mmap/munmap plus the")
+    print("      first-touch faults on a freshly mapped result.")
+    print("  A negative 'alloc-out' with a positive 'allocation' means the sign")
+    print("  flip is the destination's cache state, not the allocator.")
+
 
 def env_metadata():
     md = {
@@ -562,17 +713,23 @@ def run_one(n, args, dtypes, op_names, quiet=False):
     budget = int(args.budget_gb * 1e9)
 
     rng = np.random.default_rng(args.seed)
-    tasks, reports = build_tasks(dtypes, op_names, shape, args.repeats, rng,
-                                 args.seed, budget)
+    tasks, reports, pool_bytes_total = build_tasks(
+        dtypes, op_names, shape, args.repeats, rng, args.seed, budget,
+        pool_bytes=int(args.out_pool_gb * 1e9))
 
     footprint = sum(2 * len(t.pairs) * n_elem * t.op_itemsize
                     for t in tasks if t.mode == "out" and t.locality == "cold") / 1e9
+    pool_gb = pool_bytes_total / 1e9
     failures = [r for r in reports if not r["ok"]]
 
     if not quiet:
         f64 = n_elem * 8 / 1024
         print(f"\n  shape {shape} = {n_elem} elements "
               f"({f64:.0f} KB per float64 operand), footprint {footprint:.2f} GB")
+        if pool_gb:
+            pools = {len(t.outs) for t in tasks if t.mode == "out_pool"}
+            print(f"  destination pools: {pool_gb:.2f} GB, "
+                  f"{sorted(pools)} buffers each")
         print(f"\n{'=' * 104}\nvalidation: {len(reports) - len(failures)}/{len(reports)}"
               f" passed\n{'=' * 104}")
         for r in failures:
@@ -584,7 +741,7 @@ def run_one(n, args, dtypes, op_names, quiet=False):
           file=sys.stderr)
     tasks, times = run(tasks, args.repeats, args.seed, args.target_us,
                        args.max_call_ms)
-    return tasks, times, reports, footprint
+    return tasks, times, reports, footprint, pool_gb
 
 
 def sweep_report(results, dtypes, op_names):
@@ -598,7 +755,7 @@ def sweep_report(results, dtypes, op_names):
         for op in op_names:
             for dt in dtypes:
                 row = []
-                for n, (tasks, times, _, _) in results:
+                for n, (tasks, times, *_) in results:
                     key = f"{op}__{dt}__out__{locality}"
                     row.append(np.median(times[key]) * 1e3 / (n * 4)
                                if key in times else float("nan"))
@@ -613,19 +770,22 @@ def save_results(path, results, args, md, sizes):
     """Written after every size, not just at the end, so a long sweep that gets
     killed at the largest n still leaves the completed sizes on disk."""
     payload, meta_by_n = {}, {}
-    for n, (tasks, times, reports, footprint) in results:
+    for n, (tasks, times, reports, footprint, pool_gb) in results:
         for t in tasks:
             payload[f"n{n}__{t.key}" if len(sizes) > 1 else t.key] = times[t.key]
         meta_by_n[str(n)] = {
             "n_elem": n * 4, "footprint_gb": footprint, "validation": reports,
+            "out_pool_gb": pool_gb,
             "inner_reps": {t.key: t.inner for t in tasks},
             "n_pairs": {t.key: len(t.pairs) for t in tasks},
+            "n_outs": {t.key: len(t.outs) for t in tasks if t.mode == "out_pool"},
             "result_dtypes": {f"{t.op}__{t.dtype_name}": t.res_dtype for t in tasks},
         }
     payload["__meta__"] = np.array(json.dumps({
         "argv": sys.argv, "sizes": sizes, "sizes_completed": [n for n, _ in results],
         "repeats": args.repeats, "budget_gb": args.budget_gb,
         "target_us": args.target_us, "max_call_ms": args.max_call_ms,
+        "out_pool_gb": args.out_pool_gb,
         "env": md, "per_size": meta_by_n,
     }, default=str))
     np.savez_compressed(path, **payload)
@@ -641,6 +801,11 @@ def main():
     p.add_argument("--budget-gb", type=float, default=4.0,
                    help="TOTAL cap on the distinct-operand set across all dtypes, "
                         "split evenly; cold mode only needs it larger than L3")
+    p.add_argument("--out-pool-gb", type=float, default=0.0,
+                   help="enable the out_pool destination mode and size each "
+                        "destination pool. Set it comfortably above L3 (e.g. 1.0) "
+                        "so the destination is cache-cold but already faulted; "
+                        "0 disables the mode. See the module docstring")
     p.add_argument("--max-call-ms", type=float, default=0.0,
                    help="skip any (op, dtype) whose single call exceeds this. "
                         "Useful at large n, where quad and longdouble cost "
@@ -652,7 +817,9 @@ def main():
                         "internally to reach it, so small n stays meaningful")
     p.add_argument("--seed", type=int, default=42)
     p.add_argument("--tag", default="v2", help="suffix for the output .npz")
-    p.add_argument("--ops", default=",".join(OPS), help="comma-separated subset")
+    p.add_argument("--ops", default=",".join(DEFAULT_OPS),
+                   help=f"comma-separated subset. Also available, off by "
+                        f"default: {','.join(VIA_F32_OPS)}")
     p.add_argument("--no-quad", action="store_true", help="skip numpy_quaddtype")
     args = p.parse_args()
 
@@ -695,15 +862,16 @@ def main():
             print(f"  n={n} done, checkpointed to {out}", file=sys.stderr)
 
     if len(sizes) == 1:
-        tasks, times, reports, _ = results[0][1]
+        tasks, times, reports, *_ = results[0][1]
         report(tasks, times, list(dtypes), op_names, sizes[0] * 4)
     else:
         sweep_report([(n, r) for n, r in results], list(dtypes), op_names)
 
     save_results(out, results, args, md, sizes)
     print(f"\nsaved run-by-run timings + metadata to {out}")
+    modes = "alloc|out" + ("|out_pool" if args.out_pool_gb > 0 else "")
     print("keys are  " + ("n<N>__" if len(sizes) > 1 else "")
-          + "<op>__<dtype>__<alloc|out>__<hot|cold>")
+          + f"<op>__<dtype>__<{modes}>__<hot|cold>")
 
 
 if __name__ == "__main__":
