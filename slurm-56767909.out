@@ -1,0 +1,591 @@
+=== Wed Aug 12 08:18:31 AM PDT 2026 | job 56767909 on nid008540 ===
+
+The following have been reloaded with a version change:
+  1) cudatoolkit/12.9 => cudatoolkit/13.2
+
+
+Currently Loaded Modules:
+  1) craype-x86-milan                10) craype/2.7.35
+  2) libfabric/1.22.0                11) perftools-base/25.09.0
+  3) craype-network-ofi              12) cpe/25.09
+  4) xpmem/2.11.5-1.3_g73ade43320bc  13) craype-accel-nvidia80
+  5) gcc-native/14                   14) gpu/1.0
+  6) PrgEnv-gnu/8.6.0                15) sqs/2.0
+  7) cray-dsmml/0.3.1                16) darshan/default
+  8) cray-libsci/25.09.0             17) cudatoolkit/13.2       (g)
+  9) cray-mpich/9.0.1                18) nccl/2.29.2-cu13       (g)
+
+  Where:
+   g:  built for GPU
+
+ 
+
+device: NVIDIA A100-SXM4-80GB   free/total HBM: 78.8/79.2 GiB
+
+############################################################
+### gpu_sweep80  (08:18:40)
+###   uv run bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30
+############################################################
+  running 132 tasks x 30 repeats (n=20000) ...
+  warming up and calibrating ...
+  132 tasks, estimated 0.6 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=20000 done, checkpointed to bench_sweep80.npz
+  running 132 tasks x 30 repeats (n=250000) ...
+  warming up and calibrating ...
+  132 tasks, estimated 0.8 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=250000 done, checkpointed to bench_sweep80.npz
+  running 132 tasks x 30 repeats (n=2500000) ...
+  warming up and calibrating ...
+  132 tasks, estimated 2.8 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2500000 done, checkpointed to bench_sweep80.npz
+  running 132 tasks x 30 repeats (n=25000000) ...
+  warming up and calibrating ...
+  132 tasks, estimated 26.0 s (0.4 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=25000000 done, checkpointed to bench_sweep80.npz
+cupy 14.1.1 on device 0: NVIDIA A100-SXM4-80GB (sm_8.0, 108 SMs)
+  HBM 85.1 GB, 84.6 GB free, peak bandwidth 2039 GB/s
+  timer: event, 3 dtypes, 11 ops, 30 repeats
+
+====================================================================================================
+ns per element, hot, out=  (elements per array in header)
+====================================================================================================
+op                       dtype             80,000    1,000,000   10,000,000  100,000,000
+add                      GPU fp16          0.1199       0.0095       0.0067       0.0059
+add                      GPU fp32          0.1174       0.0094       0.0080       0.0074
+add                      GPU fp64          0.1174       0.0098       0.0150       0.0136
+mul                      GPU fp16          0.1162       0.0094       0.0067       0.0060
+mul                      GPU fp32          0.1167       0.0094       0.0082       0.0074
+mul                      GPU fp64          0.1179       0.0098       0.0151       0.0136
+div                      GPU fp16          0.1155       0.0095       0.0068       0.0060
+div                      GPU fp32          0.1168       0.0095       0.0080       0.0074
+div                      GPU fp64          0.1173       0.0101       0.0154       0.0140
+sqrt                     GPU fp16          0.1060       0.0091       0.0066       0.0059
+sqrt                     GPU fp32          0.1058       0.0092       0.0067       0.0060
+sqrt                     GPU fp64          0.1042       0.0093       0.0100       0.0093
+exp                      GPU fp16          0.1039       0.0096       0.0066       0.0059
+exp                      GPU fp32          0.1017       0.0091       0.0067       0.0059
+exp                      GPU fp64          0.1059       0.0094       0.0102       0.0094
+cos                      GPU fp16          0.1053       0.0092       0.0067       0.0059
+cos                      GPU fp32          0.1019       0.0093       0.0067       0.0059
+cos                      GPU fp64          0.1093       0.0101       0.0105       0.0095
+muladd                   GPU fp16          0.2398       0.0201       0.0134       0.0118
+muladd                   GPU fp32          0.2315       0.0198       0.0164       0.0148
+muladd                   GPU fp64          0.2361       0.0243       0.0291       0.0270
+muladd_fused             GPU fp16          0.0964       0.0092       0.0067       0.0059
+muladd_fused             GPU fp32          0.0946       0.0092       0.0081       0.0074
+muladd_fused             GPU fp64          0.0939       0.0097       0.0149       0.0136
+matmul                   GPU fp16          1.4450       0.4773       0.5100       0.5045
+matmul                   GPU fp32          0.5295       0.5204       0.4901       0.4870
+matmul                   GPU fp64          0.8125       0.7453       0.7104       0.7066
+matmul_explicit          GPU fp16          1.7564       0.1435       0.0429       0.0340
+matmul_explicit          GPU fp32          1.7884       0.1451       0.0638       0.0544
+matmul_explicit          GPU fp64          1.7820       0.1449       0.1143       0.1037
+matmul_explicit_fused    GPU fp16          0.0716       0.0055       0.0043       0.0037
+matmul_explicit_fused    GPU fp32          0.0692       0.0072       0.0076       0.0069
+matmul_explicit_fused    GPU fp64          0.0694       0.0220       0.0160       0.0145
+
+====================================================================================================
+ns per element, cold, out=  (elements per array in header)
+====================================================================================================
+op                       dtype             80,000    1,000,000   10,000,000  100,000,000
+add                      GPU fp16          0.1201       0.0098       0.0068       0.0060
+add                      GPU fp32          0.1204       0.0098       0.0081       0.0074
+add                      GPU fp64          0.1207       0.0141       0.0151       0.0136
+mul                      GPU fp16          0.1169       0.0098       0.0067       0.0059
+mul                      GPU fp32          0.1195       0.0099       0.0080       0.0074
+mul                      GPU fp64          0.1169       0.0153       0.0151       0.0136
+div                      GPU fp16          0.1180       0.0098       0.0067       0.0060
+div                      GPU fp32          0.1195       0.0107       0.0083       0.0075
+div                      GPU fp64          0.1168       0.0145       0.0155       0.0140
+sqrt                     GPU fp16          0.1047       0.0095       0.0067       0.0059
+sqrt                     GPU fp32          0.1064       0.0095       0.0067       0.0059
+sqrt                     GPU fp64          0.1071       0.0099       0.0101       0.0093
+exp                      GPU fp16          0.1071       0.0094       0.0066       0.0059
+exp                      GPU fp32          0.1067       0.0094       0.0067       0.0059
+exp                      GPU fp64          0.1043       0.0100       0.0105       0.0094
+cos                      GPU fp16          0.1058       0.0100       0.0067       0.0059
+cos                      GPU fp32          0.1056       0.0102       0.0067       0.0060
+cos                      GPU fp64          0.1078       0.0107       0.0106       0.0095
+muladd                   GPU fp16          0.2370       0.0201       0.0135       0.0118
+muladd                   GPU fp32          0.2322       0.0200       0.0163       0.0148
+muladd                   GPU fp64          0.2333       0.0265       0.0290       0.0271
+muladd_fused             GPU fp16          0.0991       0.0096       0.0067       0.0059
+muladd_fused             GPU fp32          0.0992       0.0097       0.0080       0.0074
+muladd_fused             GPU fp64          0.0992       0.0146       0.0149       0.0136
+matmul                   GPU fp16          1.4570       0.4763       0.5100       0.5044
+matmul                   GPU fp32          0.5796       0.5249       0.4905       0.4868
+matmul                   GPU fp64          0.8807       0.7452       0.7102       0.7075
+matmul_explicit          GPU fp16          1.7666       0.1437       0.0432       0.0340
+matmul_explicit          GPU fp32          1.7664       0.1444       0.0636       0.0543
+matmul_explicit          GPU fp64          1.7580       0.1445       0.1145       0.1037
+matmul_explicit_fused    GPU fp16          0.0703       0.0065       0.0042       0.0037
+matmul_explicit_fused    GPU fp32          0.0709       0.0092       0.0077       0.0068
+matmul_explicit_fused    GPU fp64          0.0704       0.0252       0.0162       0.0146
+
+  Falling steeply with size => launch overhead dominated at small n.
+  Flattening => the GPU is saturated and you are reading real throughput.
+
+saved run-by-run timings + metadata to bench_sweep80.npz
+keys are  n<N>__<op>__<dtype>__<alloc|out>__<hot|cold>
+Wrote 15,840 rows to data/gpu_sweep80/gpu_sweep80.parquet
+Missing combinations: 0 (0 nulls)
+  all ops validated
+
+############################################################
+### gpu_dense80  (08:21:00)
+###   uv run bench_gpu.py --sweep 250,500,1000,2500,5000,10000,25000,50000,100000,250000,500000,1000000,2500000,6250000,25000000,62500000 --ops add,mul,exp,matmul -r 30 --budget-gb 8
+############################################################
+  running 48 tasks x 30 repeats (n=250) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=250 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=500) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=500 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=1000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=1000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=2500) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2500 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=5000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=5000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=10000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=10000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=25000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=25000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=50000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=50000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=100000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=100000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=250000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.4 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=250000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=500000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 0.5 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=500000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=1000000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 1.0 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=1000000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=2500000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 2.2 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2500000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=6250000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 5.3 s (0.1 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=6250000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=25000000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 21.3 s (0.4 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=25000000 done, checkpointed to bench_dense80.npz
+  running 48 tasks x 30 repeats (n=62500000) ...
+  warming up and calibrating ...
+  48 tasks, estimated 53.1 s (0.9 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=62500000 done, checkpointed to bench_dense80.npz
+cupy 14.1.1 on device 0: NVIDIA A100-SXM4-80GB (sm_8.0, 108 SMs)
+  HBM 85.1 GB, 84.6 GB free, peak bandwidth 2039 GB/s
+  timer: event, 3 dtypes, 4 ops, 30 repeats
+
+====================================================================================================
+ns per element, hot, out=  (elements per array in header)
+====================================================================================================
+op                       dtype              1,000        2,000        4,000       10,000       20,000       40,000      100,000      200,000      400,000    1,000,000    2,000,000    4,000,000   10,000,000   25,000,000  100,000,000  250,000,000
+add                      GPU fp16          8.7464       4.0676       2.0772       0.8187       0.4201       0.2086       0.0821       0.0408       0.0212       0.0091       0.0076       0.0071       0.0066       0.0064       0.0059       0.0059
+add                      GPU fp32          8.3988       4.2360       2.1538       0.8956       0.4256       0.2114       0.0841       0.0409       0.0219       0.0091       0.0081       0.0084       0.0078       0.0075       0.0074       0.0073
+add                      GPU fp64          8.5280       4.2000       2.1783       0.8762       0.4257       0.2134       0.0870       0.0440       0.0212       0.0095       0.0162       0.0154       0.0148       0.0141       0.0136       0.0135
+mul                      GPU fp16          8.6309       4.1670       2.0911       0.8337       0.4162       0.2109       0.0837       0.0420       0.0219       0.0096       0.0078       0.0070       0.0067       0.0064       0.0059       0.0058
+mul                      GPU fp32          8.7827       4.2055       2.1108       0.8390       0.4287       0.2120       0.0859       0.0423       0.0220       0.0098       0.0080       0.0084       0.0078       0.0075       0.0074       0.0073
+mul                      GPU fp64          9.0531       4.2313       2.0876       0.8249       0.4269       0.2145       0.0821       0.0429       0.0211       0.0097       0.0165       0.0157       0.0148       0.0140       0.0136       0.0135
+exp                      GPU fp16          7.5093       3.7908       1.9009       0.7541       0.3743       0.1863       0.0748       0.0378       0.0196       0.0089       0.0077       0.0069       0.0066       0.0063       0.0059       0.0058
+exp                      GPU fp32          7.5264       3.7653       1.8789       0.7548       0.3694       0.1876       0.0744       0.0369       0.0196       0.0094       0.0077       0.0071       0.0066       0.0063       0.0059       0.0059
+exp                      GPU fp64          7.6554       3.7573       1.9645       0.7649       0.3788       0.1893       0.0764       0.0384       0.0196       0.0093       0.0100       0.0104       0.0102       0.0096       0.0093       0.0093
+matmul                   GPU fp16         84.9120      42.5560      21.3200       8.5072       4.2312       2.1560       1.1302       0.7533       0.5793       0.4682       0.4566       0.5090       0.5081       0.5053       0.5033       0.5033
+matmul                   GPU fp32         21.8320      10.8370       5.9840       2.2328       1.3348       0.6073       0.5707       0.5991       0.5584       0.5151       0.5034       0.4949       0.4896       0.4871       0.4863       0.4855
+matmul                   GPU fp64         22.4267      11.1920       5.5486       2.3088       1.1280       0.7903       0.7401       0.8106       0.7755       0.7386       0.7238       0.7171       0.7102       0.7064       0.7059       0.7058
+
+====================================================================================================
+ns per element, cold, out=  (elements per array in header)
+====================================================================================================
+op                       dtype              1,000        2,000        4,000       10,000       20,000       40,000      100,000      200,000      400,000    1,000,000    2,000,000    4,000,000   10,000,000   25,000,000  100,000,000  250,000,000
+add                      GPU fp16          9.3004       4.3660       2.3223       0.9208       0.4385       0.2174       0.0909       0.0430       0.0221       0.0096       0.0081       0.0073       0.0067       0.0064       0.0059       0.0059
+add                      GPU fp32          8.6373       4.2209       2.1345       0.8500       0.4219       0.2146       0.0846       0.0431       0.0221       0.0096       0.0083       0.0084       0.0077       0.0075       0.0073       0.0073
+add                      GPU fp64          8.9897       4.2115       2.1880       0.8525       0.4405       0.2215       0.0878       0.0442       0.0226       0.0143       0.0161       0.0154       0.0148       0.0140       0.0136       0.0135
+mul                      GPU fp16          8.8926       4.3451       2.2043       0.8710       0.4387       0.2227       0.0872       0.0453       0.0232       0.0096       0.0080       0.0071       0.0067       0.0064       0.0059       0.0059
+mul                      GPU fp32          8.3566       4.1789       2.1112       0.8445       0.4196       0.2113       0.0838       0.0417       0.0214       0.0098       0.0080       0.0084       0.0077       0.0075       0.0073       0.0073
+mul                      GPU fp64          8.5112       4.2051       2.1109       0.8279       0.4216       0.2118       0.0834       0.0426       0.0217       0.0140       0.0159       0.0154       0.0147       0.0140       0.0136       0.0135
+exp                      GPU fp16          7.6139       3.7316       1.8787       0.7480       0.3688       0.1891       0.0750       0.0380       0.0196       0.0092       0.0079       0.0070       0.0066       0.0063       0.0059       0.0058
+exp                      GPU fp32          7.6405       3.7880       1.9102       0.7973       0.3843       0.1905       0.0788       0.0385       0.0196       0.0097       0.0078       0.0071       0.0066       0.0063       0.0059       0.0058
+exp                      GPU fp64          7.8314       3.8181       1.9323       0.7773       0.3875       0.1949       0.0767       0.0374       0.0190       0.0098       0.0107       0.0104       0.0099       0.0096       0.0093       0.0093
+matmul                   GPU fp16         85.5280      42.5520      21.3700       8.5968       4.2556       2.1564       1.1245       0.7547       0.5788       0.4690       0.4561       0.5099       0.5081       0.5053       0.5033       0.5033
+matmul                   GPU fp32         24.4640      11.1550       6.0624       2.4733       1.3474       0.7377       0.6538       0.6483       0.5678       0.5166       0.5033       0.4958       0.4898       0.4867       0.4859       0.4858
+matmul                   GPU fp64         21.6200      11.7312       6.0264       2.4384       1.1395       0.7758       0.8678       0.8567       0.7834       0.7391       0.7234       0.7165       0.7093       0.7071       0.7061       0.7059
+
+  Falling steeply with size => launch overhead dominated at small n.
+  Flattening => the GPU is saturated and you are reading real throughput.
+
+saved run-by-run timings + metadata to bench_dense80.npz
+keys are  n<N>__<op>__<dtype>__<alloc|out>__<hot|cold>
+Wrote 23,040 rows to data/gpu_dense80/gpu_dense80.parquet
+Missing combinations: 0 (0 nulls)
+  all ops validated
+
+############################################################
+### gpu_host80  (08:24:36)
+###   uv run bench_gpu.py --sweep 250,1000,5000,25000,100000,500000,2500000 --ops add,exp --timer host -r 30
+############################################################
+  running 24 tasks x 30 repeats (n=250) ...
+  warming up and calibrating ...
+  24 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=250 done, checkpointed to bench_host80.npz
+  running 24 tasks x 30 repeats (n=1000) ...
+  warming up and calibrating ...
+  24 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=1000 done, checkpointed to bench_host80.npz
+  running 24 tasks x 30 repeats (n=5000) ...
+  warming up and calibrating ...
+  24 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=5000 done, checkpointed to bench_host80.npz
+  running 24 tasks x 30 repeats (n=25000) ...
+  warming up and calibrating ...
+  24 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=25000 done, checkpointed to bench_host80.npz
+  running 24 tasks x 30 repeats (n=100000) ...
+  warming up and calibrating ...
+  24 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=100000 done, checkpointed to bench_host80.npz
+  running 24 tasks x 30 repeats (n=500000) ...
+  warming up and calibrating ...
+  24 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=500000 done, checkpointed to bench_host80.npz
+  running 24 tasks x 30 repeats (n=2500000) ...
+  warming up and calibrating ...
+  24 tasks, estimated 0.1 s (0.0 min) of timed work
+  ... 3/30 repeats
+  ... 6/30 repeats
+  ... 9/30 repeats
+  ... 12/30 repeats
+  ... 15/30 repeats
+  ... 18/30 repeats
+  ... 21/30 repeats
+  ... 24/30 repeats
+  ... 27/30 repeats
+  ... 30/30 repeats
+  n=2500000 done, checkpointed to bench_host80.npz
+cupy 14.1.1 on device 0: NVIDIA A100-SXM4-80GB (sm_8.0, 108 SMs)
+  HBM 85.1 GB, 84.6 GB free, peak bandwidth 2039 GB/s
+  timer: host, 3 dtypes, 2 ops, 30 repeats
+
+====================================================================================================
+ns per element, hot, out=  (elements per array in header)
+====================================================================================================
+op                       dtype              1,000        4,000       20,000      100,000      400,000    2,000,000   10,000,000
+add                      GPU fp16          9.3878       2.3679       0.4477       0.0875       0.0214       0.0081       0.0068
+add                      GPU fp32          9.3882       2.3625       0.4729       0.0872       0.0212       0.0085       0.0082
+add                      GPU fp64          9.5749       2.3986       0.4628       0.0844       0.0217       0.0165       0.0153
+exp                      GPU fp16          8.5114       2.1101       0.3920       0.0784       0.0190       0.0080       0.0067
+exp                      GPU fp32          8.1261       2.1005       0.4128       0.0741       0.0189       0.0080       0.0067
+exp                      GPU fp64          7.8591       2.1084       0.3955       0.0791       0.0193       0.0102       0.0104
+
+====================================================================================================
+ns per element, cold, out=  (elements per array in header)
+====================================================================================================
+op                       dtype              1,000        4,000       20,000      100,000      400,000    2,000,000   10,000,000
+add                      GPU fp16          9.4466       2.3974       0.4637       0.0887       0.0232       0.0083       0.0068
+add                      GPU fp32          9.6390       2.2114       0.4637       0.0884       0.0216       0.0088       0.0081
+add                      GPU fp64          9.6569       2.3453       0.4822       0.0896       0.0218       0.0165       0.0152
+exp                      GPU fp16          8.5985       1.9864       0.3975       0.0798       0.0195       0.0082       0.0067
+exp                      GPU fp32          8.1375       2.1423       0.4260       0.0764       0.0195       0.0078       0.0067
+exp                      GPU fp64          8.6120       2.0406       0.4002       0.0801       0.0196       0.0108       0.0105
+
+  Falling steeply with size => launch overhead dominated at small n.
+  Flattening => the GPU is saturated and you are reading real throughput.
+
+saved run-by-run timings + metadata to bench_host80.npz
+keys are  n<N>__<op>__<dtype>__<alloc|out>__<hot|cold>
+Wrote 5,040 rows to data/gpu_host80/gpu_host80.parquet
+Missing combinations: 0 (0 nulls)
+  all ops validated
+
+=== summary (Wed Aug 12 08:24:42 AM PDT 2026) ===
+  gpu_sweep80: ok
+  gpu_dense80: ok
+  gpu_host80: ok
+
+Parquet + JSON are in data/gpu_sweep80, data/gpu_dense80, data/gpu_host80.
