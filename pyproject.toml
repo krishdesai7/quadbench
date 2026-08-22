@@ -10,6 +10,8 @@ dependencies = [
     "altair>=6.2.2",
     "cupy-cuda13x>=14.1.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'",
     "ipykernel>=7.3.0",
+    "jax>=0.11.1",
+    "jax[cuda13]>=0.11.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'",
     "numpy>=2.5.1",
     "numpy-quaddtype>=1.0.0",
     "polars>=1.43.2",
