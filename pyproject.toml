@@ -32,3 +32,4 @@ dev = [
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-p no:cacheprovider"
+markers = ["slow: executes the whole notebook (seconds)"]

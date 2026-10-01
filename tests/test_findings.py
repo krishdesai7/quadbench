@@ -178,3 +178,8 @@ def test_summary_tiles_count_every_measurement(d):
     samples = int(tiles[1][1].replace(",", ""))
     assert samples > 74_220  # more than the JAX runs alone
     assert "EPYC 7763" in tiles[2][1]
+
+
+def test_hardware_cluster_excludes_cells_numpy_computes_in_float16(v):
+    assert v["hardware_vs_f64_max"] < 3
+    assert v["int8_sqrt_vs_f64"] > 6
