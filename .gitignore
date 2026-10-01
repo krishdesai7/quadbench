@@ -15,3 +15,5 @@ wheels/
 
 # Slurm job logs
 slurm-*.out
+
+docs/superpowers/specs
