@@ -232,6 +232,9 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
         .with_columns((pl.col("ns_elem") / pl.col("base")).alias("x"))
         .drop_nulls("x")
     )
+    # NumPy computes sqrt of int8/uint8 in float16, so those cells pay the
+    # float16 conversion cost and are reported separately.
+    in_f16 = pl.col("result_dtype") == "float16"
     quad = grid.filter(pl.col("implementation") == "quad-sleef")
     quad_by_op = dict(zip(quad["operation"], quad["vs_f64"]))
 
@@ -250,7 +253,8 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
         "f16_widened_ns": (via["float16"], fmt_ns),
         "f32_native_ns": (native["float32"], fmt_ns),
         "f32_widened_ns": (via["float32"], fmt_ns),
-        "hardware_vs_f64_max": (hardware["x"].max(), fmt_ratio),
+        "hardware_vs_f64_max": (hardware.filter(~in_f16)["x"].max(), fmt_ratio),
+        "int8_sqrt_vs_f64": (hardware.filter(in_f16)["x"].max(), fmt_ratio),
         "quad_vs_f64_min": (span("quad-sleef").min(), fmt_low),
         "quad_vs_f64_max": (span("quad-sleef").max(), fmt_ratio),
         "quad_add_vs_f64": (quad_by_op["add"], fmt_ratio),
