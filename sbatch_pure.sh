@@ -2,15 +2,15 @@
 #SBATCH -A m3246
 #SBATCH -C cpu
 #SBATCH -q shared
+#SBATCH -c 32
 #SBATCH -t 02:00:00
 #SBATCH -J quadbench-pure
 #SBATCH -o slurm-%j.out
 #SBATCH -e slurm-%j.out
 
 # Pure-Python containers (list[float], list[np.float32], NDArray[object]) next
-# to the native dtypes. CPU only, single-threaded. No -c: the shared QOS then
-# hands out one core and its proportional share of memory (~4 GB), which is why
-# --budget-gb is kept small below.
+# to the native dtypes. CPU only, single-threaded: the -c 32 is there to get a
+# shared-QOS slice with enough memory, not because anything uses the cores.
 # Writes to a NEW run directory, so nothing already in data/ is touched:
 #
 #   data/cpu_pure   9 sizes, 400 to 4M elements (n = 100 .. 1M)
@@ -40,7 +40,7 @@ fi
 rm -f "$NPZ"
 if ! uv run bench_pure.py \
     --sweep 100,320,1000,3200,10000,32000,100000,320000,1000000 \
-    -r 30 --budget-gb 2 --max-call-ms 2000 --tag pure; then
+    -r 30 --budget-gb 8 --max-call-ms 2000 --tag pure; then
     echo "FAILED: bench_pure.py exited nonzero"
     [[ -e "$NPZ" ]] || exit 1
     echo "  a partial checkpoint exists; keeping it"
