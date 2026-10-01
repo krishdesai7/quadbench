@@ -16,7 +16,7 @@ import numpy as np
 import polars as pl
 import typer
 
-DATA_ROOT = Path("data")
+DATA_ROOT = Path(__file__).resolve().parents[1] / "data"
 FIELDS = ("n", "operation", "implementation", "destination", "cache_state")
 FIELD_TYPES = {
     "n": pl.Int64,

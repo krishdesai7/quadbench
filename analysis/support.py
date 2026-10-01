@@ -15,7 +15,7 @@ import polars as pl
 from IPython.display import HTML, display
 
 
-DATA_ROOT = Path(__file__).resolve().parent / "data"
+DATA_ROOT = Path(__file__).resolve().parents[1] / "data"
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 
 PALETTE = {

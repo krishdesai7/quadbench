@@ -20,7 +20,7 @@
 # Rough cost: 25-40 min, dominated by py-list-f32 at the top two sizes.
 #
 # Submit from the repo root, naming the account on the command line:
-#   sbatch -A m3246 sbatch_pure.sh
+#   sbatch -A m3246 jobs/sbatch_pure.sh
 # SBATCH_ACCOUNT in the environment (e.g. m3246_g) outranks the #SBATCH -A line
 # above, and a GPU account with -C cpu is rejected as "does not match any
 # supported policy".
@@ -38,7 +38,7 @@ if [[ -e "data/$DIR" ]]; then
 fi
 
 rm -f "$NPZ"
-if ! uv run bench_pure.py \
+if ! uv run benchmarks/bench_pure.py \
     --sweep 100,320,1000,3200,10000,32000,100000,320000,1000000 \
     -r 30 --budget-gb 8 --max-call-ms 2000 --tag pure; then
     echo "FAILED: bench_pure.py exited nonzero"
@@ -47,7 +47,7 @@ if ! uv run bench_pure.py \
 fi
 
 mkdir -p "data/$DIR" && mv "$NPZ" "data/$DIR/" || exit 1
-uv run clean_npz.py "$DIR" || { echo "archive kept, clean_npz failed" >&2; exit 1; }
+uv run tools/clean_npz.py "$DIR" || { echo "archive kept, clean_npz failed" >&2; exit 1; }
 
 # Ops that failed validation only ever land in the JSON; surface them here.
 uv run python - "data/$DIR/$DIR.json" <<'PY'

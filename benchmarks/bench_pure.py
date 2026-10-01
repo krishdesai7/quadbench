@@ -41,7 +41,7 @@ import math
 import random
 import sys
 import tracemalloc
-from typing import Any, Callable
+from collections.abc import Callable
 
 import numpy as np
 

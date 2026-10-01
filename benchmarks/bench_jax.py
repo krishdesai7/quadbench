@@ -55,10 +55,10 @@ On a Perlmutter shared GPU node, note that JAX preallocates 75% of the card by
 default; that is disabled here so it coexists with whatever else is on the GPU.
 
 Usage:
-    python bench_jax.py                                  # default n, auto backend
-    python bench_jax.py --sweep 250000,2500000,25000000 -r 30 --with-numpy
-    python bench_jax.py --timer blocking                 # per-call latency
-    python bench_jax.py --platform cpu                   # force the CPU backend
+    uv run benchmarks/bench_jax.py                       # default n, auto backend
+    uv run benchmarks/bench_jax.py --sweep 250000,2500000,25000000 -r 30 --with-numpy
+    uv run benchmarks/bench_jax.py --timer blocking      # per-call latency
+    uv run benchmarks/bench_jax.py --platform cpu        # force the CPU backend
 """
 
 from __future__ import annotations

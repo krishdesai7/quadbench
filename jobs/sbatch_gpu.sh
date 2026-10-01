@@ -22,7 +22,7 @@
 # printed at the end -- those failures only ever land in the run's JSON, never on
 # the console, which is how the cuBLAS ImportError went unnoticed last time.
 #
-# Submit from the repo root:   sbatch sbatch_gpu.sh
+# Submit from the repo root:   sbatch jobs/sbatch_gpu.sh
 
 cd "${SLURM_SUBMIT_DIR:-$PWD}" || exit 1
 
@@ -59,7 +59,7 @@ run() {
     echo
     echo "############################################################"
     echo "### $dir  ($(date +%H:%M:%S))"
-    echo "###   uv run bench_gpu.py $*"
+    echo "###   uv run benchmarks/bench_gpu.py $*"
     echo "############################################################"
 
     if [[ -e "data/$dir" ]]; then
@@ -70,7 +70,7 @@ run() {
 
     local note="ok"
     rm -f "$npz"
-    if ! uv run bench_gpu.py "$@" --tag "$tag"; then
+    if ! uv run benchmarks/bench_gpu.py "$@" --tag "$tag"; then
         echo "FAILED: bench_gpu.py exited nonzero for $dir"
         # the harness checkpoints after every size, so a partial archive is
         # still worth keeping
@@ -86,7 +86,7 @@ run() {
         STATUS+=("$dir: FAILED to file the archive")
         return
     fi
-    if ! uv run clean_npz.py "$dir"; then
+    if ! uv run tools/clean_npz.py "$dir"; then
         STATUS+=("$dir: archive kept, clean_npz failed")
         return
     fi

@@ -18,7 +18,7 @@
 #   data/jax_cpu      CPU backend + NumPy rows, same node, for the host baseline
 #
 # Sizes match sbatch_gpu.sh so the parquet joins straight onto the cupy runs.
-# Submit from the repo root:   sbatch run_jax.sh
+# Submit from the repo root:   sbatch jobs/run_jax.sh
 
 cd "${SLURM_SUBMIT_DIR:-$PWD}" || exit 1
 
@@ -54,7 +54,7 @@ run() {
     echo
     echo "############################################################"
     echo "### $dir  ($(date +%H:%M:%S))"
-    echo "###   uv run bench_jax.py $*"
+    echo "###   uv run benchmarks/bench_jax.py $*"
     echo "############################################################"
 
     if [[ -e "data/$dir" ]]; then
@@ -65,7 +65,7 @@ run() {
 
     local note="ok"
     rm -f "$npz"
-    if ! uv run bench_jax.py "$@" --tag "$tag"; then
+    if ! uv run benchmarks/bench_jax.py "$@" --tag "$tag"; then
         echo "FAILED: bench_jax.py exited nonzero for $dir"
         if [[ ! -e "$npz" ]]; then
             STATUS+=("$dir: FAILED, no archive written")
@@ -79,7 +79,7 @@ run() {
         STATUS+=("$dir: FAILED to file the archive")
         return
     fi
-    if ! uv run clean_npz.py "$dir"; then
+    if ! uv run tools/clean_npz.py "$dir"; then
         STATUS+=("$dir: archive kept, clean_npz failed")
         return
     fi

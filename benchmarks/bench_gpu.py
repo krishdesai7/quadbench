@@ -26,10 +26,10 @@ Three things differ because it is a GPU:
    measured.
 
 Usage:
-    python bench_gpu.py                         # default n
-    python bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30
-    python bench_gpu.py --timer host            # your original timing method
-    python bench_gpu.py --device 1              # pick a GPU
+    uv run benchmarks/bench_gpu.py              # default n
+    uv run benchmarks/bench_gpu.py --sweep 20000,250000,2500000,25000000 -r 30
+    uv run benchmarks/bench_gpu.py --timer host # your original timing method
+    uv run benchmarks/bench_gpu.py --device 1   # pick a GPU
 """
 
 from __future__ import annotations
