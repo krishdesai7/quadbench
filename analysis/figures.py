@@ -8,6 +8,7 @@ computed from the data, never typed in.
 
 from __future__ import annotations
 
+import itertools
 import math
 
 import altair as alt
@@ -23,8 +24,7 @@ from analysis.data import (
     gpu_ceiling_rows,
     jax_timer_series,
 )
-from analysis.style import P, Figure
-
+from analysis.style import Figure, P
 
 ADD = pl.col("operation") == "add"
 LADDER_N = 1_000_000
@@ -372,7 +372,7 @@ def cpu_gpu_crossover(d: AnalysisData) -> float:
         for n, ns in zip(cpu["elements"], cpu["ns_elem"])
         if gx[0] <= math.log(n) <= gx[-1]
     ]
-    for (x0, g0), (x1, g1) in zip(points, points[1:]):
+    for (x0, g0), (x1, g1) in itertools.pairwise(points):
         if g0 < 0 <= g1:
             return math.exp(x0 + (x1 - x0) * (-g0) / (g1 - g0))
     raise ValueError("curves do not cross")

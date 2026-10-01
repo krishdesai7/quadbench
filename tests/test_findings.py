@@ -100,7 +100,8 @@ def test_gpu_two_ceilings(v):
 
 def test_float16_is_flat_and_conversion_bound(v):
     assert 5.9 < v["f16_ns"] < 6.1
-    assert v["f16_vs_f32_min"] < 7 < 40 < v["f16_vs_f32_max"]
+    assert v["f16_vs_f32_min"] < 7
+    assert v["f16_vs_f32_max"] > 40
 
 
 def test_allocation_cliff(v):

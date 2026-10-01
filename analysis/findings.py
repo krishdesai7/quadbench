@@ -436,8 +436,10 @@ def summary_tiles(d: AnalysisData) -> list[tuple[str, str, str]]:
         (
             "GPU",
             "NVIDIA A100",
-            f"40GB and 80GB · {large['sms']} SMs each · "
-            f"{small['peak_hbm_gbs']:,.0f} / {large['peak_hbm_gbs']:,.0f} GB/s peak memory bandwidth",
+            (
+                f"40GB and 80GB · {large['sms']} SMs each · "
+                f"{small['peak_hbm_gbs']:,.0f} / {large['peak_hbm_gbs']:,.0f} GB/s peak memory bandwidth"
+            ),
         ),
     ]
 

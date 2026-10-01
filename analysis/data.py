@@ -13,7 +13,6 @@ from typing import NamedTuple
 
 import polars as pl
 
-
 DATA_ROOT = Path(__file__).resolve().parents[1] / "data"
 
 # Storage widths are fixed to the x86 Linux environment used for collection.

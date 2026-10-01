@@ -12,7 +12,6 @@ import altair as alt
 import polars as pl
 from IPython.display import HTML, SVG, display
 
-
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
 
 # Categorical slots are used in fixed order: blue, orange, aqua.  They are the
@@ -173,11 +172,15 @@ def memory_layout() -> SVG:
     # Boxed floats are scattered on the heap: deliberately irregular positions.
     heap = [(150, 150), (330, 196), (250, 232), (520, 160), (430, 226), (610, 206)]
     parts = [
-        f"<svg xmlns='http://www.w3.org/2000/svg' width='760' height='392' viewBox='0 0 760 392' "
-        f"font-family='{FONT}'>",
+        (
+            "<svg xmlns='http://www.w3.org/2000/svg' width='760' height='392' viewBox='0 0 760 392' "
+            f"font-family='{FONT}'>"
+        ),
         f"<rect width='760' height='392' fill='{P['surface']}'/>",
-        "<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' "
-        f"orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='{ink2}'/></marker></defs>",
+        (
+            "<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' "
+            f"orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='{ink2}'/></marker></defs>"
+        ),
         f"<text x='20' y='36' font-size='15' font-weight='600' fill='{ink}'>list[float]</text>",
         f"<text x='20' y='56' font-size='12' fill='{ink2}'>a row of 8-byte pointers…</text>",
     ]

@@ -74,7 +74,7 @@ def test_every_quoted_quantity_is_a_current_finding(d, prose):
 
 
 def test_no_changelog_language(prose):
-    assert not re.search(r"earlier (version|reading)|supersede|previous version|no longer claim", prose, re.I)
+    assert not re.search(r"earlier (version|reading)|supersede|previous version|no longer claim", prose, re.IGNORECASE)
 
 
 def test_every_figure_has_a_saved_rendered_chart(code_cells):
@@ -94,7 +94,7 @@ def test_saved_outputs_have_no_errors_or_stderr(code_cells):
 
 def test_every_lesson_has_the_same_shape(prose):
     for lesson in range(1, 9):
-        assert re.search(rf"^## {lesson} · ", prose, re.M), lesson
+        assert re.search(rf"^## {lesson} · ", prose, re.MULTILINE), lesson
     assert prose.count("**What this means in practice**") == 8
     assert prose.count("<summary>Details</summary>") == 8
 
