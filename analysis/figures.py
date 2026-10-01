@@ -208,7 +208,7 @@ def bytes_per_element(d: AnalysisData) -> Figure:
         width=520,
         height=230,
         title=alt.Title(
-            "Each Python float costs about six times the memory of a float64",
+            f"Each Python float takes {d.pure_memory['py-list-float'] / 8:.0f}× the memory of a float64",
             subtitle="measured with sys.getsizeof over the container and every element it holds",
         ),
     )
@@ -311,7 +311,7 @@ def gpu_call_floor(d: AnalysisData) -> Figure:
         width=540,
         height=300,
         title=alt.Title(
-            "A small GPU call costs the same whether it does 1,000 or 400,000 elements of work",
+            f"A small GPU call costs the same whether it does {rows['n_elem'].min():,} or {edge:,} elements of work",
             subtitle="CuPy add on an A100-80GB · cold operands, preallocated result · shaded = the fixed-cost floor",
         ),
     )
@@ -386,7 +386,7 @@ def cpu_vs_gpu(d: AnalysisData) -> Figure:
         width=540,
         height=310,
         title=alt.Title(
-            "Below about 20,000 elements, one CPU core beats an A100",
+            f"Below about {round(crossover, -4):,.0f} elements, one CPU core beats an A100",
             subtitle="add · 64-bit float · cold operands, preallocated result · the GPU pays its fixed cost first",
         ),
     )
@@ -419,7 +419,7 @@ def cache_curve(d: AnalysisData) -> Figure:
         column=alt.Column("implementation:N", title=None, sort=FEATURED), data=curve
     ).resolve_scale(y="independent").properties(
         title=alt.Title(
-            "The same add costs 3× more once the data no longer fits in cache",
+            "The same add costs far more once the data no longer fits in cache",
             subtitle="NumPy add · preallocated result · each panel has its own y-scale",
         )
     )
@@ -742,7 +742,7 @@ def destination_decomposition(d: AnalysisData) -> Figure:
         column=alt.Column("implementation:N", title=None, sort=["float32", "float64", "int32", "int64"]), data=three
     ).properties(
         title=alt.Title(
-            "A result buffer that has left the cache costs up to 60% extra; allocating it costs nothing until 8M elements",
+            "A result buffer that has left the cache costs extra; allocating a new one is free until the largest size",
             subtitle="NumPy add · cold operands · out_pool = rotate through preallocated buffers too big to stay cached",
         )
     )
@@ -800,7 +800,7 @@ COMMON_GPU_OPS = ["add", "exp", "matmul"]
 
 def framework_endpoint(d: AnalysisData) -> pl.DataFrame:
     """CuPy and JAX fp32 per-element cost at the largest matched size."""
-    rows = _framework_rows(d)
+    rows = framework_rows(d)
     return (
         rows.filter(pl.col("n_elem") == rows["n_elem"].max())
         .pivot("series", index="operation", values="ns_elem")
@@ -809,7 +809,7 @@ def framework_endpoint(d: AnalysisData) -> pl.DataFrame:
     )
 
 
-def _framework_rows(d: AnalysisData) -> pl.DataFrame:
+def framework_rows(d: AnalysisData) -> pl.DataFrame:
     jax = d.runs["jax_dense"].filter(
         (pl.col("destination") == "jit") & (pl.col("cache_state") == "cold")
         & (pl.col("implementation") == "JAX fp32") & pl.col("operation").is_in(COMMON_GPU_OPS)
@@ -822,7 +822,7 @@ def _framework_rows(d: AnalysisData) -> pl.DataFrame:
 
 def jax_vs_cupy(d: AnalysisData) -> Figure:
     """Matched JAX and CuPy fp32 execution cost across size."""
-    rows = _framework_rows(d)
+    rows = framework_rows(d)
     chart = alt.Chart(rows).mark_line(point=alt.OverlayMarkDef(size=48), strokeWidth=2.1).encode(
         x=alt.X("n_elem:Q", scale=alt.Scale(type="log", nice=False), title="elements (log scale)", axis=alt.Axis(format="~s")),
         y=alt.Y("ns_elem:Q", scale=alt.Scale(type="log"), title="ns per element (log scale)"),
@@ -863,6 +863,7 @@ def fusion_table(d: AnalysisData) -> pl.DataFrame:
 def jit_fusion(d: AnalysisData) -> Figure:
     """How much compiling the whole expression saves, per op and dtype."""
     fusion = fusion_table(d)
+    fused = fusion.filter(pl.col("operation") != "add")["JIT speedup"]
     points = alt.Chart().mark_point(size=110, color=P["series"][0]).encode(
         x=alt.X("JIT speedup:Q", scale=alt.Scale(type="log", domain=[0.8, 128]), title="eager time ÷ JIT time (log scale)",
                 axis=alt.Axis(values=[1, 2, 4, 8, 16, 32, 64, 128], format="~g")),
@@ -876,7 +877,7 @@ def jit_fusion(d: AnalysisData) -> Figure:
         column=alt.Column("implementation:N", sort=JAX_DTYPES, title=None), data=fusion
     ).properties(
         title=alt.Title(
-            "Compiling a whole expression is 2–16× faster than running it step by step",
+            f"Compiling a whole expression is {fused.min():.0f}–{fused.max():.0f}× faster than running it step by step",
             subtitle="JAX on an A100-80GB · 100 million elements · add is the control: one step, nothing to fuse",
         )
     )
