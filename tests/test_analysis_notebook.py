@@ -16,6 +16,7 @@ The function is also discoverable by pytest when these inline dependencies are
 installed in the test environment.
 """
 
+import ast
 from pathlib import Path
 
 import nbformat
@@ -24,6 +25,41 @@ from nbclient import NotebookClient
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOK = ROOT / "analysis.ipynb"
+
+
+def test_notebook_keeps_support_implementation_out_of_view() -> None:
+    """Presentation cells contain analysis calls, not reusable infrastructure."""
+    notebook = nbformat.read(NOTEBOOK, as_version=4)
+
+    for index, cell in enumerate(notebook.cells):
+        if cell.cell_type != "code":
+            continue
+
+        tree = ast.parse(cell.source)
+        definitions = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        ]
+        assert not definitions, (
+            f"code cell {index} exposes helper definitions: "
+            f"{[node.name for node in definitions]}"
+        )
+
+        assigned_values = [
+            node.value
+            for node in tree.body
+            if isinstance(node, (ast.Assign, ast.AnnAssign))
+        ]
+        large_mappings = [
+            mapping
+            for value in assigned_values
+            for mapping in ast.walk(value)
+            if isinstance(mapping, ast.Dict) and len(mapping.keys) >= 8
+        ]
+        assert not large_mappings, (
+            f"code cell {index} exposes a large configuration mapping"
+        )
 
 
 def test_analysis_notebook() -> None:
@@ -124,4 +160,5 @@ assert 26.39 < cpu_matmul["NumPy / JAX time"] < 26.40
 
 
 if __name__ == "__main__":
+    test_notebook_keeps_support_implementation_out_of_view()
     test_analysis_notebook()
