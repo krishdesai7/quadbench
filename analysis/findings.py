@@ -17,7 +17,12 @@ from analysis.data import ALLOC_COLD, OUT_COLD, OUT_HOT, AnalysisData
 
 Finding = tuple[float, Callable[[float], str]]
 ADD = pl.col("operation") == "add"
-PAGE = 4096
+# Standard (GIL) CPython on 64-bit: a list slot is an 8-byte pointer and a
+# float object is 24 bytes.  The pure-Python run used the free-threaded build,
+# whose object header makes a float 40 bytes, so these give the layout the
+# audience's own interpreter has.
+STANDARD_POINTER_BYTES = 8
+STANDARD_FLOAT_BYTES = 24
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +123,9 @@ def _containers(d: AnalysisData) -> dict[str, Finding]:
         "list_bytes": (d.pure_memory["py-list-float"], fmt_bytes),
         "list_size_vs_f64": (d.pure_memory["py-list-float"] / 8, lambda x: f"{x:.0f}×"),
         "list_size_vs_f32": (d.pure_memory["py-list-float"] / 4, lambda x: f"{x:.0f}×"),
+        "std_list_bytes": (STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES, fmt_bytes),
+        "std_list_vs_f64": ((STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES) / 8, lambda x: f"{x:.0f}×"),
+        "std_list_vs_f32": ((STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES) / 4, lambda x: f"{x:.0f}×"),
     }
 
 
@@ -236,7 +244,6 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
     # float16 conversion cost and are reported separately.
     in_f16 = pl.col("result_dtype") == "float16"
     quad = grid.filter(pl.col("implementation") == "quad-sleef")
-    quad_by_op = dict(zip(quad["operation"], quad["vs_f64"]))
 
     ratios = figures.gpu_precision_table(d)
     binary = ratios.filter(pl.col("operation").is_in(["add", "mul", "div"]))
@@ -257,8 +264,7 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
         "int8_sqrt_vs_f64": (hardware.filter(in_f16)["x"].max(), fmt_ratio),
         "quad_vs_f64_min": (span("quad-sleef").min(), fmt_low),
         "quad_vs_f64_max": (span("quad-sleef").max(), fmt_ratio),
-        "quad_add_vs_f64": (quad_by_op["add"], fmt_ratio),
-        "quad_exp_vs_f64": (quad_by_op["exp"], fmt_ratio),
+        "quad_exp_vs_f64": (quad.filter(pl.col("operation") == "exp")["vs_f64"].item(), fmt_ratio),
         "ld_vs_f64_min": (span("longdouble64").min(), fmt_low),
         "ld_vs_f64_max": (span("longdouble64").max(), fmt_ratio),
         "f16grid_vs_f64_min": (span("float16").min(), fmt_low),
@@ -291,10 +297,15 @@ def _allocation(d: AnalysisData) -> dict[str, Finding]:
         (pl.col("cache_state") == "cold") & ADD & (pl.col("implementation") == "float64")
     ).pivot("destination", index="result_mib", values="us").row(0, named=True)
     fault_us = dram["alloc"] - dram["out"]
-    pages = dram["result_mib"] * 2**20 / PAGE
+    # Where alloc beats even the preallocated `out=` form: the part of the
+    # decomposition that cache state does not explain.
+    vs_out = d.runs["cpu_alloc"].filter((pl.col("cache_state") == "cold") & ADD).pivot(
+        "destination", index=["implementation", "n_elem"], values="us"
+    ).filter(pl.col("n_elem") < largest)
+    alloc_beats_out = ((1 - vs_out["alloc"] / vs_out["out"]) * 100).max()
     return {
         "cold_dest_max": (cold["pct"].max(), fmt_pct0),
-        "alloc_negative_max": (-alloc.filter(pl.col("n_elem") < largest)["pct"].min(), fmt_pct0),
+        "alloc_beats_out_max": (alloc_beats_out, fmt_pct0),
         "alloc_jump": (alloc.filter(pl.col("n_elem") == largest)["pct"].max(), fmt_pct0),
         "alloc_cells_below": (below.height, fmt_int),
         "alloc_cells_above": (above.height, fmt_int),
@@ -305,7 +316,7 @@ def _allocation(d: AnalysisData) -> dict[str, Finding]:
         "alloc_median_above": (above["pct"].median(), fmt_pct),
         "alloc_min_above": (above["pct"].min(), fmt_pct),
         "fault_us": (fault_us, fmt_us),
-        "fault_ns_per_page": (fault_us * 1e3 / pages, fmt_ns),
+        "fault_gbs": (dram["result_mib"] * 2**20 / (fault_us * 1e-6) / 1e9, fmt_gbs),
     }
 
 
@@ -408,10 +419,24 @@ def jax_quality(d: AnalysisData) -> pl.DataFrame:
     return pl.DataFrame(rows)
 
 
+def repeat_range(d: AnalysisData) -> tuple[int, int]:
+    """Fewest and most timing samples behind any measured cell."""
+    counts = pl.concat([
+        d.everything["samples"],
+        *(frame["samples"] for frame in d.parallel.values()),
+        d.pure["samples"],
+    ])
+    measured = counts.filter(counts > 0)
+    return int(measured.min()), int(measured.max())
+
+
 def _quality(d: AnalysisData) -> dict[str, Finding]:
     q = jax_quality(d)
     unmeasured = (q["planned cells"] - q["measured cells"]).sum()
+    repeats_lo, repeats_hi = repeat_range(d)
     return {
+        "repeats_lo": (repeats_lo, fmt_int),
+        "repeats_hi": (repeats_hi, fmt_int),
         "jax_validations": (q["validations"].sum(), fmt_int),
         "jax_unmeasured_cells": (unmeasured, fmt_int),
         "jax_max_ulp": (q["maximum JAX ULP error"].max(), lambda x: f"{x:.2f} ULP"),
@@ -428,10 +453,11 @@ def summary_tiles(d: AnalysisData) -> list[tuple[str, str, str]]:
     """(label, value, note) tiles describing what was measured and on what."""
     cells = d.everything.filter(pl.col("us").is_not_null()).height + d.pure.height
     samples = sum(frame["time_us"].is_not_null().sum() for frame, _ in d.raw.values()) + d.pure["samples"].sum()
+    repeats_lo, repeats_hi = repeat_range(d)
     small, large = d.meta["gpu_sweep"]["device"], d.meta["gpu_sweep80"]["device"]
     return [
         ("Cells measured", fmt_int(cells), "one operation × dtype × size × setting"),
-        ("Timing samples", fmt_int(samples), "20–50 repeats per cell, medians throughout"),
+        ("Timing samples", fmt_int(samples), f"{repeats_lo:.0f}–{repeats_hi:.0f} repeats per cell, medians throughout"),
         ("CPU", "AMD EPYC 7763", "Perlmutter CPU node · one core · AVX2"),
         (
             "GPU",

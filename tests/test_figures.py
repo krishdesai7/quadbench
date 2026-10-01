@@ -109,3 +109,10 @@ def test_memory_layout_diagram_contrasts_list_and_array():
     svg = style.memory_layout().data
     assert svg.lstrip().startswith("<svg")
     assert "list[float]" in svg and "NDArray[np.float64]" in svg
+
+
+def test_bytes_chart_shows_standard_cpython_layout_beside_measured(d):
+    table = figures.bytes_per_element(d).table
+    rows = dict(zip(table["representation"], table["bytes"]))
+    assert rows["list[float] · standard CPython ‡"] == 32
+    assert 47 < rows["list[float]"] < 49

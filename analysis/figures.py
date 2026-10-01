@@ -138,6 +138,7 @@ def representation_ladder(d: AnalysisData) -> Figure:
     """Per-element cost of add for every container and dtype, on one axis."""
     rows = _ladder_rows(d)
     order = rows["representation"].to_list()
+    borrowed = rows.filter(pl.col("representation").str.ends_with("†")).select("representation", "n_elem").rows()
     x = alt.X(
         "ns_elem:Q",
         scale=alt.Scale(type="log", domain=[0.004, 400], nice=False),
@@ -164,8 +165,9 @@ def representation_ladder(d: AnalysisData) -> Figure:
         title=alt.Title(
             "A list of Python floats is the slowest way to hold numbers",
             subtitle=[
-                "add · 4 million elements · cold operands · result allocated on every call",
-                "† flat-cost dtype shown at the largest size the run measured",
+                "add · 4 million elements · cold operands · result allocated on every call · Python rows: free-threaded CPython 3.14",
+                "† flat cost per element, shown at the largest size measured: "
+                + ", ".join(f"{name.split('[')[1].split(']')[0]} at {n:,} elements" for name, n in borrowed),
             ],
         ),
     )
@@ -185,9 +187,10 @@ def bytes_per_element(d: AnalysisData) -> Figure:
         [
             pl.DataFrame(
                 {
-                    "representation": [PYTHON_LABELS[k] for k in PYTHON_LABELS],
-                    "kind": ["Python objects"] * 3,
-                    "bytes": [d.pure_memory[k] for k in PYTHON_LABELS],
+                    "representation": [*(PYTHON_LABELS[k] for k in PYTHON_LABELS), "list[float] · standard CPython ‡"],
+                    "kind": ["Python objects"] * 4,
+                    # Standard CPython: an 8-byte pointer plus a 24-byte float object.
+                    "bytes": [*(d.pure_memory[k] for k in PYTHON_LABELS), 32.0],
                 }
             ),
             pl.DataFrame(
@@ -214,8 +217,11 @@ def bytes_per_element(d: AnalysisData) -> Figure:
         width=520,
         height=230,
         title=alt.Title(
-            f"Each Python float takes {d.pure_memory['py-list-float'] / 8:.0f}× the memory of a float64",
-            subtitle="measured with sys.getsizeof over the container and every element it holds",
+            f"A list of floats takes {32 / 8:.0f}–{d.pure_memory['py-list-float'] / 8:.0f}× the memory of a float64 array",
+            subtitle=[
+                "measured with sys.getsizeof over the container and every element, on free-threaded CPython 3.14",
+                "‡ standard CPython, from its object layout: 8-byte pointer + 24-byte float (not measured)",
+            ],
         ),
     )
     return Figure(chart, rows.drop("label"), "Table view · bytes per element")
@@ -266,7 +272,7 @@ def boxed_vs_unboxed_by_size(d: AnalysisData) -> Figure:
         height=320,
         title=alt.Title(
             f"A list of floats stays {ratio.min():.0f}–{ratio.max():.0f}× slower than a float64 array at every size",
-            subtitle="add · cold operands · result allocated on every call",
+            subtitle="add · cold operands · result allocated on every call · Python rows: free-threaded CPython 3.14",
         ),
     ).configure_view(clip=False)
     table = rows.pivot("representation", index="n_elem", values="ns_elem").sort("n_elem")
@@ -423,7 +429,7 @@ def cache_curve(d: AnalysisData) -> Figure:
         y=alt.Y("ns_elem:Q", title="ns per element", scale=alt.Scale(domainMin=0)),
         color=alt.Color("cache_state:N", sort=["hot", "cold"],
                         scale=alt.Scale(domain=["hot", "cold"], range=P["series"][:2]),
-                        legend=alt.Legend(title=None, labelExpr="datum.label == 'hot' ? 'hot: same operands every call' : 'cold: fresh operands every call'")),
+                        legend=alt.Legend(title=None, labelExpr="datum.label == 'hot' ? 'hot: same operands every call' : 'cold: a different pair every call, from a set too big to cache'")),
         tooltip=[alt.Tooltip("implementation:N", title="dtype"), alt.Tooltip("n_elem:Q", title="elements", format=","),
                  alt.Tooltip("cache_state:N", title="operands"), alt.Tooltip("ns_elem:Q", title="ns / element", format=".3f")],
     )
@@ -465,7 +471,7 @@ def cpu_bandwidth(d: AnalysisData) -> Figure:
                  alt.Tooltip("gbs:Q", title="GB/s", format=".1f"), alt.Tooltip("us:Q", title="µs / call", format=",.0f")],
     )
     marks = pl.DataFrame({"x": [plateau, aggregate],
-                          "t": [f"one core: {plateau:.1f} GB/s", f"four cores together: {aggregate:.1f} GB/s"]})
+                          "t": [f"one core: {plateau:.1f} GB/s", f"four cores on one chiplet: {aggregate:.1f} GB/s"]})
     rules = alt.Chart(marks).mark_rule(color=P["ink2"], strokeWidth=1).encode(x="x:Q")
     marks = marks.with_columns(pl.Series("y", [400.0, 420.0]))
     text = alt.Chart(marks).mark_text(align="right", dx=-6, fontSize=12, color=P["ink2"]).encode(
@@ -475,7 +481,7 @@ def cpu_bandwidth(d: AnalysisData) -> Figure:
         height=440,
         title=alt.Title(
             "Every cheap operation hits the same memory speed limit",
-            subtitle="NumPy · 8 million elements, past every cache · four-core figure: four pinned single-threaded processes",
+            subtitle="NumPy · 8 million elements, past every cache · four-core figure: four processes pinned to cores 0–3",
         ),
     )
     table = band.select("operation", "implementation", "result_dtype", "gbs", "us")
@@ -556,7 +562,7 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
         width=540,
         height=320,
         title=alt.Title(
-            "Every GPU kernel hits one of two limits: elements per second, or memory bandwidth",
+            "Every CuPy elementwise kernel hits one of two limits: elements per second, or memory bandwidth",
             subtitle="CuPy elementwise ops · 100 million elements · hollow = A100-40GB, filled = A100-80GB",
         ),
     )
@@ -755,7 +761,10 @@ def destination_decomposition(d: AnalysisData) -> Figure:
     ).properties(
         title=alt.Title(
             "A result buffer that has left the cache costs extra; allocating a new one is free until the largest size",
-            subtitle="NumPy add · cold operands · out_pool = rotate through preallocated buffers too big to stay cached",
+            subtitle=[
+                "NumPy add · cold operands · out_pool = rotate through preallocated buffers too big to stay cached",
+                "below 32 MiB a fresh allocation reuses the block just freed, which is still in cache",
+            ],
         )
     )
     return Figure(chart, three, "Table view · destination cost decomposition")

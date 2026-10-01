@@ -184,3 +184,30 @@ def test_summary_tiles_count_every_measurement(d):
 def test_hardware_cluster_excludes_cells_numpy_computes_in_float16(v):
     assert v["hardware_vs_f64_max"] < 3
     assert v["int8_sqrt_vs_f64"] > 6
+
+
+def test_standard_cpython_list_layout_is_pointer_plus_float(v):
+    # The pure-Python run used free-threaded CPython; the audience uses the
+    # standard build, where a float object is 24 bytes.
+    assert v["std_list_bytes"] == 32
+    assert v["std_list_vs_f64"] == 4
+
+
+def test_allocation_residue_is_alloc_beating_preallocated(v):
+    assert 20 < v["alloc_beats_out_max"] < 30
+    assert "alloc_negative_max" not in v
+
+
+def test_fresh_memory_costs_about_one_write_pass(v):
+    assert 20 < v["fault_gbs"] < 30
+    assert "fault_ns_per_page" not in v
+
+
+def test_repeat_range_covers_every_run(v):
+    assert v["repeats_lo"] == 10
+    assert v["repeats_hi"] == 50
+
+
+def test_quad_range_low_end_is_cos(v):
+    assert v["quad_vs_f64_min"] < 11
+    assert "quad_add_vs_f64" not in v
