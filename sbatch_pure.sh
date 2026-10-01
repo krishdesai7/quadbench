@@ -2,7 +2,6 @@
 #SBATCH -A m3246
 #SBATCH -C cpu
 #SBATCH -q shared
-#SBATCH -c 32
 #SBATCH -t 02:00:00
 #SBATCH -J quadbench-pure
 #SBATCH -o slurm-%j.out
