@@ -6,19 +6,18 @@ every chart in the notebook shares one look without per-chart configuration.
 
 from __future__ import annotations
 
-from typing import NamedTuple
+from typing import NamedTuple, cast
 
 import altair as alt
 import polars as pl
-from IPython.display import HTML, SVG, display
+from IPython.display import HTML, display
 
-FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
+FONT = 'Cochineal, system-ui, -apple-system, "Segoe UI", sans-serif'
 
 # Categorical slots are used in fixed order: blue, orange, aqua.  They are the
 # validated reference palette's first three slots.
-P = {
-    "surface": "#fcfcfb",
-    "plane": "#f9f9f7",
+P: dict[str, list[str] | str] = {
+    "transparent": "transparent",
     "ink": "#0b0b0b",
     "ink2": "#52514e",
     "muted": "#898781",
@@ -47,12 +46,12 @@ class Figure(NamedTuple):
     label: str = "Table view"
 
 
-@alt.theme.register("quadbench", enable=True)
+@alt.theme.register(name="quadbench", enable=True)  # ty: ignore[invalid-argument-type]
 def _quadbench_theme() -> dict:
     """Return the shared presentation theme, sized for a projector."""
     return {
         "config": {
-            "background": P["surface"],
+            "background": P["transparent"],
             "font": FONT,
             "padding": {"left": 6, "right": 18, "top": 6, "bottom": 6},
             "view": {
@@ -124,7 +123,7 @@ def _quadbench_theme() -> dict:
             "point": {
                 "size": 100,
                 "filled": True,
-                "stroke": P["surface"],
+                "stroke": P["transparent"],
                 "strokeWidth": 2,
                 "opacity": 1,
             },
@@ -141,16 +140,16 @@ def _quadbench_theme() -> dict:
 
 def configure_notebook() -> None:
     """Apply display defaults used throughout the notebook."""
-    pl.Config.set_tbl_rows(20)
-    pl.Config.set_tbl_width_chars(160)
-    pl.Config.set_tbl_hide_dataframe_shape(True)
-    alt.data_transformers.enable("default", max_rows=20_000)
+    pl.Config.set_tbl_rows(n=20)
+    pl.Config.set_tbl_width_chars(width=160)
+    pl.Config.set_tbl_hide_dataframe_shape(active=True)
+    alt.data_transformers.enable(name="default", max_rows=20_000)
 
 
 def _table_view(frame: pl.DataFrame, label: str) -> HTML:
     """Return a collapsed, textual counterpart to a chart."""
     return HTML(
-        f"<details style='font:13px {FONT};color:{P['ink2']};margin:2px 0 22px'>"
+        data=f"<details style='font:13px {FONT};color:{P['ink2']};margin:2px 0 22px'>"
         f"<summary style='cursor:pointer;padding:4px 0'>{label} "
         f"({frame.height:,} rows)</summary>{frame._repr_html_()}</details>"
     )
@@ -164,19 +163,31 @@ def show(*figures: Figure) -> None:
             display(_table_view(figure.table, figure.label))
 
 
-def memory_layout() -> SVG:
+def memory_layout() -> HTML:
     """Diagram: a list of pointers to boxed floats against one block of raw values."""
-    orange, blue, ink, ink2, grid = P["series"][1], P["series"][0], P["ink"], P["ink2"], P["grid"]
-    values = ["1.5", "2.0", "0.7", "3.1", "4.2", "0.9"]
-    cell, x0 = 64, 190
+    orange: str = P["series"][1]
+    blue: str = P["series"][0]
+    ink: str = cast(typ=str, val=P["ink"])
+    ink2: str = cast(typ=str, val=P["ink2"])
+    grid: str = cast(typ=str, val=P["grid"])
+    values: list[str] = ["1.5", "2.0", "0.7", "3.1", "4.2", "0.9"]
+    cell: int = 64
+    x0: int = 190
     # Boxed floats are scattered on the heap: deliberately irregular positions.
-    heap = [(150, 150), (330, 196), (250, 232), (520, 160), (430, 226), (610, 206)]
-    parts = [
+    heap: list[tuple[int, int]] = [
+        (150, 150),
+        (330, 196),
+        (250, 232),
+        (520, 160),
+        (430, 226),
+        (610, 206),
+    ]
+    parts: list[str] = [
         (
             "<svg xmlns='http://www.w3.org/2000/svg' width='760' height='392' viewBox='0 0 760 392' "
             f"font-family='{FONT}'>"
         ),
-        f"<rect width='760' height='392' fill='{P['surface']}'/>",
+        f"<rect width='760' height='392' fill='{P['transparent']}'/>",
         (
             "<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' "
             f"orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='{ink2}'/></marker></defs>"
@@ -184,16 +195,24 @@ def memory_layout() -> SVG:
         f"<text x='20' y='36' font-size='15' font-weight='600' fill='{ink}'>list[float]</text>",
         f"<text x='20' y='56' font-size='12' fill='{ink2}'>a row of 8-byte pointers…</text>",
     ]
-    for i, (hx, hy) in enumerate(heap):
-        x = x0 + i * cell
-        parts.append(f"<rect x='{x}' y='26' width='{cell - 4}' height='34' rx='4' fill='none' stroke='{orange}' stroke-width='2'/>")
-        parts.append(f"<circle cx='{x + (cell - 4) / 2}' cy='43' r='4' fill='{orange}'/>")
+    for i, (hx, hy) in enumerate(iterable=heap):
+        x: int = x0 + i * cell
+        parts.append(
+            f"<rect x='{x}' y='26' width='{cell - 4}' height='34' rx='4' fill='none' stroke='{orange}' stroke-width='2'/>"
+        )
+        parts.append(
+            f"<circle cx='{x + (cell - 4) / 2}' cy='43' r='4' fill='{orange}'/>"
+        )
         parts.append(
             f"<path d='M{x + (cell - 4) / 2},47 L{hx + 45},{hy - 2}' stroke='{ink2}' stroke-width='1.2' "
             "fill='none' marker-end='url(#arrow)'/>"
         )
-        parts.append(f"<rect x='{hx}' y='{hy}' width='90' height='30' rx='4' fill='{orange}' fill-opacity='0.14' stroke='{orange}' stroke-width='1.5'/>")
-        parts.append(f"<text x='{hx + 8}' y='{hy + 19}' font-size='11' fill='{ink2}'>ref·type·<tspan font-weight='600' fill='{ink}'>{values[i]}</tspan></text>")
+        parts.append(
+            f"<rect x='{hx}' y='{hy}' width='90' height='30' rx='4' fill='{orange}' fill-opacity='0.14' stroke='{orange}' stroke-width='1.5'/>"
+        )
+        parts.append(
+            f"<text x='{hx + 8}' y='{hy + 19}' font-size='11' fill='{ink2}'>ref·type·<tspan font-weight='600' fill='{ink}'>{values[i]}</tspan></text>"
+        )
     parts += [
         f"<text x='20' y='176' font-size='12' fill='{ink2}'>…to float objects</text>",
         f"<text x='20' y='193' font-size='12' fill='{ink2}'>scattered on the heap,</text>",
@@ -203,21 +222,25 @@ def memory_layout() -> SVG:
         f"<text x='20' y='326' font-size='15' font-weight='600' fill='{ink}'>NDArray[np.float64]</text>",
         f"<text x='20' y='346' font-size='12' fill='{ink2}'>one contiguous block of raw numbers</text>",
     ]
-    for i, value in enumerate(values):
-        x = x0 + 60 + i * cell
-        parts.append(f"<rect x='{x}' y='306' width='{cell}' height='40' fill='{blue}' fill-opacity='0.14' stroke='{blue}' stroke-width='1.5'/>")
-        parts.append(f"<text x='{x + cell / 2}' y='331' font-size='13' font-weight='600' text-anchor='middle' fill='{ink}'>{value}</text>")
+    for i, value in enumerate(iterable=values):
+        x: int = x0 + 60 + i * cell
+        parts.append(
+            f"<rect x='{x}' y='306' width='{cell}' height='40' fill='{blue}' fill-opacity='0.14' stroke='{blue}' stroke-width='1.5'/>"
+        )
+        parts.append(
+            f"<text x='{x + cell / 2}' y='331' font-size='13' font-weight='600' text-anchor='middle' fill='{ink}'>{value}</text>"
+        )
     parts += [
         f"<text x='{x0 + 60}' y='370' font-size='12' fill='{ink2}'>8 bytes each, side by side: the CPU streams through them in one compiled loop</text>",
         "</svg>",
     ]
-    return SVG("".join(parts))
+    return HTML(data="".join(parts))
 
 
 def _stat_tile(label: str, value: str, note: str) -> str:
     """Render one statistic in a summary strip."""
     return (
-        f"<div style='flex:1 1 200px;min-width:180px;background:{P['surface']};"
+        f"<div style='flex:1 1 200px;min-width:180px;background:{P['transparent']};"
         f"border:1px solid {P['grid']};border-radius:10px;padding:14px 16px'>"
         f"<div style='font:500 12.5px {FONT};color:{P['muted']};"
         f"letter-spacing:.02em'>{label}</div>"
@@ -231,8 +254,8 @@ def stat_tiles(tiles: list[tuple[str, str, str]]) -> None:
     """Display a strip of (label, value, note) statistic tiles."""
     display(
         HTML(
-            f"<div style='display:flex;gap:12px;flex-wrap:wrap;"
-            f"background:{P['plane']};padding:14px;border-radius:12px'>"
+            data=f"<div style='display:flex;gap:12px;flex-wrap:wrap;"
+            f"background:{P['transparent']};padding:14px;border-radius:12px'>"
             + "".join(_stat_tile(*tile) for tile in tiles)
             + "</div>"
         )

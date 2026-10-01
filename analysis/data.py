@@ -129,8 +129,7 @@ def _load_run(run: str, data_root: Path) -> tuple[pl.DataFrame, dict]:
         )
 
     element_counts = {
-        int(size): block["n_elem"]
-        for size, block in metadata["per_size"].items()
+        int(size): block["n_elem"] for size, block in metadata["per_size"].items()
     }
     result_dtype_rows = []
     for size, block in metadata["per_size"].items():
@@ -182,42 +181,30 @@ def _load_run(run: str, data_root: Path) -> tuple[pl.DataFrame, dict]:
             .then(pl.lit("CuPy"))
             .otherwise(pl.lit("NumPy"))
             .alias("framework"),
-            pl.col("implementation")
-            .replace(CANONICAL_DTYPE)
-            .alias("operand_dtype"),
+            pl.col("implementation").replace(CANONICAL_DTYPE).alias("operand_dtype"),
             execution_mode.alias("execution_mode"),
             pl.lit(metadata.get("timer", "host")).alias("timer"),
             pl.col("n").replace_strict(element_counts).alias("n_elem"),
             pl.col("result_dtype").fill_null(pl.col("implementation")),
         )
         .with_columns(
-            pl.col("implementation")
-            .replace_strict(ITEMSIZE)
-            .alias("operand_bytes"),
+            pl.col("implementation").replace_strict(ITEMSIZE).alias("operand_bytes"),
             pl.col("result_dtype").replace_strict(ITEMSIZE).alias("result_bytes"),
             pl.when(base_operation.is_in(UNARY)).then(1).otherwise(2).alias("reads"),
             (pl.col("result_dtype") != pl.col("operand_dtype")).alias("promoted"),
         )
         .with_columns(
-            (
-                pl.col("reads") * pl.col("operand_bytes")
-                + pl.col("result_bytes")
-            ).alias("b_elem")
+            (pl.col("reads") * pl.col("operand_bytes") + pl.col("result_bytes")).alias(
+                "b_elem"
+            )
         )
         .with_columns(
             (pl.col("time_us") * 1e3 / pl.col("n_elem")).alias("ns_elem"),
             (
-                pl.col("b_elem")
-                * pl.col("n_elem")
-                / (pl.col("time_us") * 1e-6)
-                / 1e9
+                pl.col("b_elem") * pl.col("n_elem") / (pl.col("time_us") * 1e-6) / 1e9
             ).alias("gbs"),
-            (
-                pl.col("n_elem") / (pl.col("time_us") * 1e-6) / 1e9
-            ).alias("gelem_s"),
-            (
-                pl.col("n_elem") * pl.col("result_bytes") / MIB
-            ).alias("result_mib"),
+            (pl.col("n_elem") / (pl.col("time_us") * 1e-6) / 1e9).alias("gelem_s"),
+            (pl.col("n_elem") * pl.col("result_bytes") / MIB).alias("result_mib"),
         ),
         metadata,
     )
@@ -255,16 +242,11 @@ def _load_pure(data_root: Path) -> tuple[pl.DataFrame, dict[str, float]]:
     metadata = json.loads((run_dir / "cpu_pure.json").read_text())
 
     element_counts = {
-        int(size): block["n_elem"]
-        for size, block in metadata["per_size"].items()
+        int(size): block["n_elem"] for size, block in metadata["per_size"].items()
     }
     cells = (
-        frame.with_columns(
-            pl.col("n").replace_strict(element_counts).alias("n_elem")
-        )
-        .with_columns(
-            (pl.col("time_us") * 1e3 / pl.col("n_elem")).alias("ns_elem")
-        )
+        frame.with_columns(pl.col("n").replace_strict(element_counts).alias("n_elem"))
+        .with_columns((pl.col("time_us") * 1e3 / pl.col("n_elem")).alias("ns_elem"))
         .group_by(PURE_KEYS)
         .agg(
             pl.col("time_us").median().alias("us"),
@@ -290,8 +272,7 @@ def load_analysis(data_root: str | Path = DATA_ROOT) -> AnalysisData:
     metadata = {run: run_meta for run, (_, run_meta) in raw.items()}
     runs = {run: _cells(frame) for run, (frame, _) in raw.items()}
     parallel = {
-        index: _cells(_load_run(f"cpu_par{index}", root)[0])
-        for index in range(4)
+        index: _cells(_load_run(f"cpu_par{index}", root)[0]) for index in range(4)
     }
     everything = pl.concat([runs[run] for run in RUNS])
     pure, pure_memory = _load_pure(root)
@@ -307,8 +288,7 @@ def allocation_penalty(
     return (
         runs[run]
         .filter(
-            (pl.col("cache_state") == "cold")
-            & pl.col("operation").is_in(operations)
+            (pl.col("cache_state") == "cold") & pl.col("operation").is_in(operations)
         )
         .pivot(
             "destination",
@@ -317,9 +297,7 @@ def allocation_penalty(
         )
         .drop_nulls(["alloc", "out"])
         .with_columns(
-            ((pl.col("alloc") - pl.col("out")) / pl.col("out") * 100).alias(
-                "pct"
-            ),
+            ((pl.col("alloc") - pl.col("out")) / pl.col("out") * 100).alias("pct"),
             pl.lit(run).alias("run"),
         )
         .select("run", "operation", "implementation", "result_mib", "pct")

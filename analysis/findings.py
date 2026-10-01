@@ -96,13 +96,22 @@ def fmt_hundreds(x: float) -> str:
 def _containers(d: AnalysisData) -> dict[str, Finding]:
     ladder = figures.representation_ladder(d).table
     ns = dict(zip(ladder["representation"], ladder["ns per element"]))
-    lst, f64, f32 = ns["list[float]"], ns["NDArray[np.float64]"], ns["NDArray[np.float32]"]
+    lst, f64, f32 = (
+        ns["list[float]"],
+        ns["NDArray[np.float64]"],
+        ns["NDArray[np.float32]"],
+    )
 
     matched = (
-        d.pure.filter(ADD & (pl.col("cache_state") == "cold") & (pl.col("implementation") == "py-list-float"))
+        d.pure.filter(
+            ADD
+            & (pl.col("cache_state") == "cold")
+            & (pl.col("implementation") == "py-list-float")
+        )
         .select("n_elem", pl.col("ns_elem").alias("list"))
         .join(
-            d.runs["cpu_dense"].filter(ADD & ALLOC_COLD & (pl.col("implementation") == "float64"))
+            d.runs["cpu_dense"]
+            .filter(ADD & ALLOC_COLD & (pl.col("implementation") == "float64"))
             .select("n_elem", pl.col("ns_elem").alias("f64")),
             on="n_elem",
         )
@@ -124,8 +133,14 @@ def _containers(d: AnalysisData) -> dict[str, Finding]:
         "list_size_vs_f64": (d.pure_memory["py-list-float"] / 8, lambda x: f"{x:.0f}×"),
         "list_size_vs_f32": (d.pure_memory["py-list-float"] / 4, lambda x: f"{x:.0f}×"),
         "std_list_bytes": (STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES, fmt_bytes),
-        "std_list_vs_f64": ((STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES) / 8, lambda x: f"{x:.0f}×"),
-        "std_list_vs_f32": ((STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES) / 4, lambda x: f"{x:.0f}×"),
+        "std_list_vs_f64": (
+            (STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES) / 8,
+            lambda x: f"{x:.0f}×",
+        ),
+        "std_list_vs_f32": (
+            (STANDARD_POINTER_BYTES + STANDARD_FLOAT_BYTES) / 4,
+            lambda x: f"{x:.0f}×",
+        ),
     }
 
 
@@ -138,9 +153,15 @@ def _call_cost(d: AnalysisData) -> dict[str, Finding]:
     edge, lo, hi = figures.gpu_floor_extent(d)
     smallest = d.runs["gpu_dense80"]["n_elem"].min()
     cross = figures.cpu_vs_gpu(d).table
-    cpu = cross.filter(pl.col("machine") == figures.CROSS_SERIES[0]).select("elements", pl.col("ns_elem").alias("cpu"))
-    gpu = cross.filter(pl.col("machine") == figures.CROSS_SERIES[1]).select("elements", pl.col("ns_elem").alias("gpu"))
-    advantage = cpu.join(gpu, on="elements").with_columns((pl.col("cpu") / pl.col("gpu")).alias("x"))
+    cpu = cross.filter(pl.col("machine") == figures.CROSS_SERIES[0]).select(
+        "elements", pl.col("ns_elem").alias("cpu")
+    )
+    gpu = cross.filter(pl.col("machine") == figures.CROSS_SERIES[1]).select(
+        "elements", pl.col("ns_elem").alias("gpu")
+    )
+    advantage = cpu.join(gpu, on="elements").with_columns(
+        (pl.col("cpu") / pl.col("gpu")).alias("x")
+    )
     return {
         "gpu_floor_lo": (lo, fmt_us),
         "gpu_floor_hi": (hi, fmt_us),
@@ -157,14 +178,21 @@ def _call_cost(d: AnalysisData) -> dict[str, Finding]:
 
 
 def _caches(d: AnalysisData) -> dict[str, Finding]:
-    dense = d.runs["cpu_dense"].filter((pl.col("destination") == "out") & (pl.col("implementation") == "float64"))
-    add = dense.filter(ADD).pivot("cache_state", index="n_elem", values="ns_elem").sort("n_elem").with_columns(
-        (pl.col("cold") / pl.col("hot")).alias("ratio")
+    dense = d.runs["cpu_dense"].filter(
+        (pl.col("destination") == "out") & (pl.col("implementation") == "float64")
+    )
+    add = (
+        dense.filter(ADD)
+        .pivot("cache_state", index="n_elem", values="ns_elem")
+        .sort("n_elem")
+        .with_columns((pl.col("cold") / pl.col("hot")).alias("ratio"))
     )
     minimum = add.row(by_predicate=pl.col("hot") == add["hot"].min(), named=True)
     peak = add.row(by_predicate=pl.col("ratio") == add["ratio"].max(), named=True)
     large = add.filter(pl.col("n_elem") >= 400_000)
-    exp = dense.filter((pl.col("operation") == "exp") & (pl.col("cache_state") == "hot"))["ns_elem"]
+    exp = dense.filter(
+        (pl.col("operation") == "exp") & (pl.col("cache_state") == "hot")
+    )["ns_elem"]
     return {
         "l2_min_ns": (minimum["hot"], fmt_ns),
         "l2_min_elems": (minimum["n_elem"], fmt_int),
@@ -189,8 +217,14 @@ def _bandwidth(d: AnalysisData) -> dict[str, Finding]:
     individual = [d.parallel[i].filter(OUT_COLD & ADD)["gbs"][0] for i in range(4)]
     aggregate = sum(individual)
     _, limits = figures.gpu_ceilings(d)
-    by_card = {("80" if "80GB" in card else "40"): row for card, row in zip(limits["card"], limits.iter_rows(named=True))}
-    peaks = {"80": d.meta["gpu_sweep80"]["peak_hbm_gbs"], "40": d.meta["gpu_sweep"]["peak_hbm_gbs"]}
+    by_card = {
+        ("80" if "80GB" in card else "40"): row
+        for card, row in zip(limits["card"], limits.iter_rows(named=True))
+    }
+    peaks = {
+        "80": d.meta["gpu_sweep80"]["peak_hbm_gbs"],
+        "40": d.meta["gpu_sweep"]["peak_hbm_gbs"],
+    }
     saturation = figures.gpu_bandwidth_by_size(d).table
     top = saturation.filter(pl.col("n_elem") == saturation["n_elem"].max())
     pct = dict(zip(top["implementation"], top["pct"]))
@@ -200,14 +234,20 @@ def _bandwidth(d: AnalysisData) -> dict[str, Finding]:
         "four_core_gbs": (aggregate, fmt_gbs),
         "four_core_scale": (aggregate / plateau, fmt_ratio),
         "per_process_slowdown": (plateau / (aggregate / 4), fmt_ratio),
-        "gpu_elem_rate": (limits["elem"].mean(), lambda x: f"{x:.0f} billion elements per second"),
+        "gpu_elem_rate": (
+            limits["elem"].mean(),
+            lambda x: f"{x:.0f} billion elements per second",
+        ),
         "hbm_plateau_80": (by_card["80"]["bw"], fmt_gbs),
         "hbm_plateau_40": (by_card["40"]["bw"], fmt_gbs),
         "hbm_pct_80": (by_card["80"]["bw"] / peaks["80"] * 100, fmt_pct0),
         "hbm_pct_40": (by_card["40"]["bw"] / peaks["40"] * 100, fmt_pct0),
         "crossover_bytes_80": (by_card["80"]["bw"] / by_card["80"]["elem"], fmt_dec),
         "crossover_bytes_40": (by_card["40"]["bw"] / by_card["40"]["elem"], fmt_dec),
-        "bandwidth_gain_80": ((by_card["80"]["bw"] / by_card["40"]["bw"] - 1) * 100, fmt_pct0),
+        "bandwidth_gain_80": (
+            (by_card["80"]["bw"] / by_card["40"]["bw"] - 1) * 100,
+            fmt_pct0,
+        ),
         "gpu_fp16_pct": (pct["GPU fp16"], fmt_pct0),
         "gpu_fp32_pct": (pct["GPU fp32"], fmt_pct0),
         "gpu_fp64_pct": (pct["GPU fp64"], fmt_pct0),
@@ -220,7 +260,9 @@ def _bandwidth(d: AnalysisData) -> dict[str, Finding]:
 
 
 def _precision(d: AnalysisData) -> dict[str, Finding]:
-    curve = figures.float16_curve(d).table.with_columns((pl.col("float16") / pl.col("float32")).alias("ratio"))
+    curve = figures.float16_curve(d).table.with_columns(
+        (pl.col("float16") / pl.col("float32")).alias("ratio")
+    )
     f16 = curve["float16"]
     lo_row = curve.row(by_predicate=pl.col("ratio") == curve["ratio"].min(), named=True)
     hi_row = curve.row(by_predicate=pl.col("ratio") == curve["ratio"].max(), named=True)
@@ -230,12 +272,20 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
     via = dict(zip(mech["implementation"], mech["via"]))
 
     grid = figures.dtype_grid(d).table
+
     def span(impl: str) -> pl.Series:
         return grid.filter(pl.col("implementation") == impl)["vs_f64"]
+
     sweep = d.runs["cpu_sweep"].filter(OUT_HOT & (pl.col("n") == 64_000))
-    base = sweep.filter(pl.col("implementation") == "float64").select("operation", pl.col("ns_elem").alias("base"))
+    base = sweep.filter(pl.col("implementation") == "float64").select(
+        "operation", pl.col("ns_elem").alias("base")
+    )
     hardware = (
-        sweep.filter(~pl.col("implementation").is_in(["quad-sleef", "longdouble64", "float16", "float64"]))
+        sweep.filter(
+            ~pl.col("implementation").is_in(
+                ["quad-sleef", "longdouble64", "float16", "float64"]
+            )
+        )
         .join(base, on="operation")
         .with_columns((pl.col("ns_elem") / pl.col("base")).alias("x"))
         .drop_nulls("x")
@@ -248,10 +298,15 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
     ratios = figures.gpu_precision_table(d)
     binary = ratios.filter(pl.col("operation").is_in(["add", "mul", "div"]))
     unary = ratios.filter(pl.col("operation").is_in(["sqrt", "exp", "cos"]))
-    fused = ratios.row(by_predicate=pl.col("operation") == "matmul_explicit_fused", named=True)
+    fused = ratios.row(
+        by_predicate=pl.col("operation") == "matmul_explicit_fused", named=True
+    )
     return {
         "f16_ns": (f16.median(), fmt_ns),
-        "f16_spread": ((f16.max() - f16.min()) / 2 / f16.median() * 100, lambda x: f"±{x:.0f}%"),
+        "f16_spread": (
+            (f16.max() - f16.min()) / 2 / f16.median() * 100,
+            lambda x: f"±{x:.0f}%",
+        ),
         "f16_vs_f32_min": (lo_row["ratio"], fmt_ratio),
         "f16_vs_f32_min_elems": (lo_row["n_elem"], fmt_int),
         "f16_vs_f32_max": (hi_row["ratio"], fmt_ratio),
@@ -264,7 +319,10 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
         "int8_sqrt_vs_f64": (hardware.filter(in_f16)["x"].max(), fmt_ratio),
         "quad_vs_f64_min": (span("quad-sleef").min(), fmt_low),
         "quad_vs_f64_max": (span("quad-sleef").max(), fmt_ratio),
-        "quad_exp_vs_f64": (quad.filter(pl.col("operation") == "exp")["vs_f64"].item(), fmt_ratio),
+        "quad_exp_vs_f64": (
+            quad.filter(pl.col("operation") == "exp")["vs_f64"].item(),
+            fmt_ratio,
+        ),
         "ld_vs_f64_min": (span("longdouble64").min(), fmt_low),
         "ld_vs_f64_max": (span("longdouble64").max(), fmt_ratio),
         "f16grid_vs_f64_min": (span("float16").min(), fmt_low),
@@ -293,20 +351,33 @@ def _allocation(d: AnalysisData) -> dict[str, Finding]:
     below = cliff.filter(pl.col("side") == figures.SIDES[0])
     above = cliff.filter(pl.col("side") == figures.SIDES[1])
 
-    dram = d.runs["cpu_dram50"].filter(
-        (pl.col("cache_state") == "cold") & ADD & (pl.col("implementation") == "float64")
-    ).pivot("destination", index="result_mib", values="us").row(0, named=True)
+    dram = (
+        d.runs["cpu_dram50"]
+        .filter(
+            (pl.col("cache_state") == "cold")
+            & ADD
+            & (pl.col("implementation") == "float64")
+        )
+        .pivot("destination", index="result_mib", values="us")
+        .row(0, named=True)
+    )
     fault_us = dram["alloc"] - dram["out"]
     # Where alloc beats even the preallocated `out=` form: the part of the
     # decomposition that cache state does not explain.
-    vs_out = d.runs["cpu_alloc"].filter((pl.col("cache_state") == "cold") & ADD).pivot(
-        "destination", index=["implementation", "n_elem"], values="us"
-    ).filter(pl.col("n_elem") < largest)
+    vs_out = (
+        d.runs["cpu_alloc"]
+        .filter((pl.col("cache_state") == "cold") & ADD)
+        .pivot("destination", index=["implementation", "n_elem"], values="us")
+        .filter(pl.col("n_elem") < largest)
+    )
     alloc_beats_out = ((1 - vs_out["alloc"] / vs_out["out"]) * 100).max()
     return {
         "cold_dest_max": (cold["pct"].max(), fmt_pct0),
         "alloc_beats_out_max": (alloc_beats_out, fmt_pct0),
-        "alloc_jump": (alloc.filter(pl.col("n_elem") == largest)["pct"].max(), fmt_pct0),
+        "alloc_jump": (
+            alloc.filter(pl.col("n_elem") == largest)["pct"].max(),
+            fmt_pct0,
+        ),
         "alloc_cells_below": (below.height, fmt_int),
         "alloc_cells_above": (above.height, fmt_int),
         "alloc_largest_below_mib": (below["result_mib"].max(), fmt_mib),
@@ -335,10 +406,14 @@ def _compilation(d: AnalysisData) -> dict[str, Finding]:
     cupy_small = smallest.filter(pl.col("series") == figures.FRAMEWORK_SERIES[1])["us"]
 
     fusion = figures.fusion_table(d)
+
     def speedup(op: str) -> pl.Series:
         return fusion.filter(pl.col("operation") == op)["JIT speedup"]
+
     chain32 = fusion.row(
-        by_predicate=(pl.col("operation") == "chain") & (pl.col("implementation") == "JAX fp32"), named=True
+        by_predicate=(pl.col("operation") == "chain")
+        & (pl.col("implementation") == "JAX fp32"),
+        named=True,
     )["JIT speedup"]
 
     cpu = figures.cpu_framework_table(d)
@@ -347,8 +422,14 @@ def _compilation(d: AnalysisData) -> dict[str, Finding]:
         "cupy_jax_add": (cupy_over_jax["add"], fmt_ratio),
         "cupy_jax_exp": (cupy_over_jax["exp"], fmt_ratio),
         "cupy_jax_matmul": (cupy_over_jax["matmul"], fmt_ratio),
-        "jax_matmul_ms": (matmul[figures.FRAMEWORK_SERIES[0]] * rows["n_elem"].max() / 1e6, fmt_ms),
-        "cupy_matmul_ms": (matmul[figures.FRAMEWORK_SERIES[1]] * rows["n_elem"].max() / 1e6, lambda x: f"{x:,.0f} ms"),
+        "jax_matmul_ms": (
+            matmul[figures.FRAMEWORK_SERIES[0]] * rows["n_elem"].max() / 1e6,
+            fmt_ms,
+        ),
+        "cupy_matmul_ms": (
+            matmul[figures.FRAMEWORK_SERIES[1]] * rows["n_elem"].max() / 1e6,
+            lambda x: f"{x:,.0f} ms",
+        ),
         "jax_small_lo": (jax_small.min(), fmt_us),
         "jax_small_hi": (jax_small.max(), fmt_us),
         "cupy_small_lo": (cupy_small.min(), fmt_us),
@@ -377,15 +458,29 @@ def _measurement(d: AnalysisData) -> dict[str, Finding]:
     add = floor.row(by_predicate=pl.col("operation") == "add", named=True)
     exp = floor.row(by_predicate=pl.col("operation") == "exp", named=True)
     rows = figures.timer_rows(d)
-    big = rows.filter(pl.col("n_elem") == rows["n_elem"].max()).pivot("series", index="operation", values="us")
+    big = rows.filter(pl.col("n_elem") == rows["n_elem"].max()).pivot(
+        "series", index="operation", values="us"
+    )
     gap = ((big["JAX blocking"] / big["JAX pipelined"]) - 1).abs().max() * 100
     return {
         "pipelined_add_us": (add["JAX pipelined"], fmt_us),
         "blocking_add_us": (add["JAX blocking"], fmt_us),
         "blocking_ratio_add": (add["blocking / pipelined"], fmt_ratio),
         "blocking_ratio_exp": (exp["blocking / pipelined"], fmt_ratio),
-        "blocking_extra_lo": (min(add["JAX blocking"] - add["JAX pipelined"], exp["JAX blocking"] - exp["JAX pipelined"]), fmt_low),
-        "blocking_extra_hi": (max(add["JAX blocking"] - add["JAX pipelined"], exp["JAX blocking"] - exp["JAX pipelined"]), fmt_us),
+        "blocking_extra_lo": (
+            min(
+                add["JAX blocking"] - add["JAX pipelined"],
+                exp["JAX blocking"] - exp["JAX pipelined"],
+            ),
+            fmt_low,
+        ),
+        "blocking_extra_hi": (
+            max(
+                add["JAX blocking"] - add["JAX pipelined"],
+                exp["JAX blocking"] - exp["JAX pipelined"],
+            ),
+            fmt_us,
+        ),
         "protocol_gap_large": (gap, fmt_pct0),
     }
 
@@ -402,30 +497,41 @@ def jax_quality(d: AnalysisData) -> pl.DataFrame:
     rows = []
     for run in JAX_RUNS:
         frame, meta = d.raw[run]
-        validations = [r for size in meta["per_size"].values() for r in size["validation"]]
+        validations = [
+            r for size in meta["per_size"].values() for r in size["validation"]
+        ]
         samples = frame["time_us"].is_not_null().sum()
-        rows.append({
-            "run": run,
-            "completed sizes": f"{len(meta['sizes_completed'])}/{len(meta['sizes'])}",
-            "planned cells": frame.height // meta["repeats"],
-            "measured cells": samples // meta["repeats"],
-            "timing samples": samples,
-            "validations": len(validations),
-            "failed validations": sum(not r["ok"] for r in validations),
-            "maximum ULP error": max(r["ulp"] for r in validations),
-            "maximum JAX ULP error": max(r["ulp"] for r in validations if r["dtype"].startswith("JAX ")),
-            "timed-loop recompiles": sum(len(s["compile_check"]["recompiled"]) for s in meta["per_size"].values()),
-        })
+        rows.append(
+            {
+                "run": run,
+                "completed sizes": f"{len(meta['sizes_completed'])}/{len(meta['sizes'])}",
+                "planned cells": frame.height // meta["repeats"],
+                "measured cells": samples // meta["repeats"],
+                "timing samples": samples,
+                "validations": len(validations),
+                "failed validations": sum(not r["ok"] for r in validations),
+                "maximum ULP error": max(r["ulp"] for r in validations),
+                "maximum JAX ULP error": max(
+                    r["ulp"] for r in validations if r["dtype"].startswith("JAX ")
+                ),
+                "timed-loop recompiles": sum(
+                    len(s["compile_check"]["recompiled"])
+                    for s in meta["per_size"].values()
+                ),
+            }
+        )
     return pl.DataFrame(rows)
 
 
 def repeat_range(d: AnalysisData) -> tuple[int, int]:
     """Fewest and most timing samples behind any measured cell."""
-    counts = pl.concat([
-        d.everything["samples"],
-        *(frame["samples"] for frame in d.parallel.values()),
-        d.pure["samples"],
-    ])
+    counts = pl.concat(
+        [
+            d.everything["samples"],
+            *(frame["samples"] for frame in d.parallel.values()),
+            d.pure["samples"],
+        ]
+    )
     measured = counts.filter(counts > 0)
     return int(measured.min()), int(measured.max())
 
@@ -451,13 +557,20 @@ def _quality(d: AnalysisData) -> dict[str, Finding]:
 
 def summary_tiles(d: AnalysisData) -> list[tuple[str, str, str]]:
     """(label, value, note) tiles describing what was measured and on what."""
-    cells = d.everything.filter(pl.col("us").is_not_null()).height + d.pure.height
-    samples = sum(frame["time_us"].is_not_null().sum() for frame, _ in d.raw.values()) + d.pure["samples"].sum()
+    cells: int = d.everything.filter(pl.col.us.is_not_null()).height + d.pure.height
+    samples: float = (
+        sum(frame["time_us"].is_not_null().sum() for frame, _ in d.raw.values())
+        + d.pure["samples"].sum()  # ty: ignore[unsupported-operator]
+    )
     repeats_lo, repeats_hi = repeat_range(d)
     small, large = d.meta["gpu_sweep"]["device"], d.meta["gpu_sweep80"]["device"]
     return [
-        ("Cells measured", fmt_int(cells), "one operation × dtype × size × setting"),
-        ("Timing samples", fmt_int(samples), f"{repeats_lo:.0f}–{repeats_hi:.0f} repeats per cell, medians throughout"),
+        ("Cells measured", fmt_int(x=cells), "one operation × dtype × size × setting"),
+        (
+            "Timing samples",
+            fmt_int(x=samples),
+            f"{repeats_lo:.0f}–{repeats_hi:.0f} repeats per cell, medians throughout",
+        ),
         ("CPU", "AMD EPYC 7763", "Perlmutter CPU node · one core · AVX2"),
         (
             "GPU",
@@ -472,8 +585,15 @@ def summary_tiles(d: AnalysisData) -> list[tuple[str, str, str]]:
 
 def _registry(d: AnalysisData) -> dict[str, Finding]:
     return (
-        _containers(d) | _call_cost(d) | _caches(d) | _bandwidth(d)
-        | _precision(d) | _allocation(d) | _compilation(d) | _measurement(d) | _quality(d)
+        _containers(d)
+        | _call_cost(d)
+        | _caches(d)
+        | _bandwidth(d)
+        | _precision(d)
+        | _allocation(d)
+        | _compilation(d)
+        | _measurement(d)
+        | _quality(d)
     )
 
 

@@ -7,12 +7,11 @@ authors = [
 ]
 requires-python = ">=3.14.7"
 dependencies = [
-    "altair>=6.3.0",
+    "altair[save]>=6.3.0",
     "cupy-cuda13x>=14.2.0 ; platform_machine == 'x86_64' and sys_platform == 'linux'",
     "ipykernel>=7.4.0",
     "jax>=0.11.2",
     "jax[cuda13]>=0.11.2 ; platform_machine == 'x86_64' and sys_platform == 'linux'",
-    "jupyterlab>=4.6.4",
     "numpy>=2.5.3",
     "numpy-quaddtype>=1.0.0",
     "polars>=1.44.2",
@@ -25,7 +24,6 @@ dev = [
     "nbclient>=0.11.0",
     "nbformat>=5.11.1",
     "pytest>=9.1.1",
-    "vl-convert-python>=1.9.0.post1",
 ]
 
 [tool.pytest.ini_options]
@@ -33,3 +31,6 @@ pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-p no:cacheprovider"
 markers = ["slow: executes the whole notebook (seconds)"]
+
+[tool.pyrefly]
+permissive-ignores = true
