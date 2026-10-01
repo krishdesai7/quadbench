@@ -420,6 +420,24 @@ def _quality(d: AnalysisData) -> dict[str, Finding]:
 # ---------------------------------------------------------------------------
 
 
+def summary_tiles(d: AnalysisData) -> list[tuple[str, str, str]]:
+    """(label, value, note) tiles describing what was measured and on what."""
+    cells = d.everything.filter(pl.col("us").is_not_null()).height + d.pure.height
+    samples = sum(frame["time_us"].is_not_null().sum() for frame, _ in d.raw.values()) + d.pure["samples"].sum()
+    small, large = d.meta["gpu_sweep"]["device"], d.meta["gpu_sweep80"]["device"]
+    return [
+        ("Cells measured", fmt_int(cells), "one operation × dtype × size × setting"),
+        ("Timing samples", fmt_int(samples), "20–50 repeats per cell, medians throughout"),
+        ("CPU", "AMD EPYC 7763", "Perlmutter CPU node · one core · AVX2"),
+        (
+            "GPU",
+            "NVIDIA A100",
+            f"40GB and 80GB · {large['sms']} SMs each · "
+            f"{small['peak_hbm_gbs']:,.0f} / {large['peak_hbm_gbs']:,.0f} GB/s peak memory bandwidth",
+        ),
+    ]
+
+
 def _registry(d: AnalysisData) -> dict[str, Finding]:
     return (
         _containers(d) | _call_cost(d) | _caches(d) | _bandwidth(d)

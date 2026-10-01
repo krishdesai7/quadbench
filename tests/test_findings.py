@@ -169,3 +169,12 @@ def test_jax_byte_accounting(d, implementation, result_dtype, width):
     assert row["operand_bytes"] == row["result_bytes"] == width
     assert row["b_elem"] == 3 * width
     assert row["promoted"] is False
+
+
+def test_summary_tiles_count_every_measurement(d):
+    tiles = findings.summary_tiles(d)
+    labels = [label for label, _, _ in tiles]
+    assert labels == ["Cells measured", "Timing samples", "CPU", "GPU"]
+    samples = int(tiles[1][1].replace(",", ""))
+    assert samples > 74_220  # more than the JAX runs alone
+    assert "EPYC 7763" in tiles[2][1]

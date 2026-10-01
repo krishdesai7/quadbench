@@ -10,7 +10,7 @@ from typing import NamedTuple
 
 import altair as alt
 import polars as pl
-from IPython.display import HTML, display
+from IPython.display import HTML, SVG, display
 
 
 FONT = 'system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -163,6 +163,52 @@ def show(*figures: Figure) -> None:
         display(figure.chart)
         if figure.table is not None:
             display(_table_view(figure.table, figure.label))
+
+
+def memory_layout() -> SVG:
+    """Diagram: a list of pointers to boxed floats against one block of raw values."""
+    orange, blue, ink, ink2, grid = P["series"][1], P["series"][0], P["ink"], P["ink2"], P["grid"]
+    values = ["1.5", "2.0", "0.7", "3.1", "4.2", "0.9"]
+    cell, x0 = 64, 190
+    # Boxed floats are scattered on the heap: deliberately irregular positions.
+    heap = [(150, 150), (330, 196), (250, 232), (520, 160), (430, 226), (610, 206)]
+    parts = [
+        f"<svg xmlns='http://www.w3.org/2000/svg' width='760' height='392' viewBox='0 0 760 392' "
+        f"font-family='{FONT}'>",
+        f"<rect width='760' height='392' fill='{P['surface']}'/>",
+        "<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' "
+        f"orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='{ink2}'/></marker></defs>",
+        f"<text x='20' y='36' font-size='15' font-weight='600' fill='{ink}'>list[float]</text>",
+        f"<text x='20' y='56' font-size='12' fill='{ink2}'>a row of 8-byte pointers…</text>",
+    ]
+    for i, (hx, hy) in enumerate(heap):
+        x = x0 + i * cell
+        parts.append(f"<rect x='{x}' y='26' width='{cell - 4}' height='34' rx='4' fill='none' stroke='{orange}' stroke-width='2'/>")
+        parts.append(f"<circle cx='{x + (cell - 4) / 2}' cy='43' r='4' fill='{orange}'/>")
+        parts.append(
+            f"<path d='M{x + (cell - 4) / 2},47 L{hx + 45},{hy - 2}' stroke='{ink2}' stroke-width='1.2' "
+            "fill='none' marker-end='url(#arrow)'/>"
+        )
+        parts.append(f"<rect x='{hx}' y='{hy}' width='90' height='30' rx='4' fill='{orange}' fill-opacity='0.14' stroke='{orange}' stroke-width='1.5'/>")
+        parts.append(f"<text x='{hx + 8}' y='{hy + 19}' font-size='11' fill='{ink2}'>ref·type·<tspan font-weight='600' fill='{ink}'>{values[i]}</tspan></text>")
+    parts += [
+        f"<text x='20' y='176' font-size='12' fill='{ink2}'>…to float objects</text>",
+        f"<text x='20' y='193' font-size='12' fill='{ink2}'>scattered on the heap,</text>",
+        f"<text x='20' y='210' font-size='12' fill='{ink2}'>each with its own</text>",
+        f"<text x='20' y='227' font-size='12' fill='{ink2}'>header</text>",
+        f"<line x1='20' y1='282' x2='740' y2='282' stroke='{grid}'/>",
+        f"<text x='20' y='326' font-size='15' font-weight='600' fill='{ink}'>NDArray[np.float64]</text>",
+        f"<text x='20' y='346' font-size='12' fill='{ink2}'>one contiguous block of raw numbers</text>",
+    ]
+    for i, value in enumerate(values):
+        x = x0 + 60 + i * cell
+        parts.append(f"<rect x='{x}' y='306' width='{cell}' height='40' fill='{blue}' fill-opacity='0.14' stroke='{blue}' stroke-width='1.5'/>")
+        parts.append(f"<text x='{x + cell / 2}' y='331' font-size='13' font-weight='600' text-anchor='middle' fill='{ink}'>{value}</text>")
+    parts += [
+        f"<text x='{x0 + 60}' y='370' font-size='12' fill='{ink2}'>8 bytes each, side by side: the CPU streams through them in one compiled loop</text>",
+        "</svg>",
+    ]
+    return SVG("".join(parts))
 
 
 def _stat_tile(label: str, value: str, note: str) -> str:

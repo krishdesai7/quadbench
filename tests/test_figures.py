@@ -103,3 +103,9 @@ def test_crossover_annotation_is_computed_between_measured_sizes(d):
     crossover = figures.cpu_gpu_crossover(d)
     cpu = table.filter(pl.col("machine").str.starts_with("x86"))
     assert cpu["elements"].min() < crossover < cpu["elements"].max()
+
+
+def test_memory_layout_diagram_contrasts_list_and_array():
+    svg = style.memory_layout().data
+    assert svg.lstrip().startswith("<svg")
+    assert "list[float]" in svg and "NDArray[np.float64]" in svg
