@@ -2,8 +2,9 @@
 
 import altair as alt
 import polars as pl
+import pytest
 
-from analysis import style
+from analysis import data, figures, style
 
 
 def _tiny_figure() -> style.Figure:
@@ -37,3 +38,68 @@ def test_stat_tiles_render_every_tile(monkeypatch):
     style.stat_tiles([("CPU", "EPYC 7763", "1 thread"), ("GPU", "A100", "108 SMs")])
     html = shown[0].data
     assert "EPYC 7763" in html and "A100" in html and "108 SMs" in html
+
+
+FIGURES = [
+    "representation_ladder",
+    "bytes_per_element",
+    "boxed_vs_unboxed_by_size",
+    "gpu_call_floor",
+    "cpu_vs_gpu",
+    "cache_curve",
+    "cpu_bandwidth",
+    "gpu_bandwidth_by_size",
+    "gpu_two_ceilings",
+    "float16_curve",
+    "float16_mechanism",
+    "dtype_grid",
+    "gpu_precision_ratios",
+    "destination_decomposition",
+    "allocation_cliff",
+    "jax_vs_cupy",
+    "jit_fusion",
+    "jax_vs_numpy_cpu",
+    "timing_protocol",
+]
+
+
+@pytest.mark.parametrize("name", FIGURES)
+def test_figure_builds_a_valid_spec_with_a_table(d, name):
+    figure = getattr(figures, name)(d)
+    assert isinstance(figure, style.Figure)
+    figure.chart.to_dict(validate=True)
+    assert figure.table is not None and figure.table.height > 0
+
+
+def test_ladder_orders_every_representation_slowest_first(d):
+    table = figures.representation_ladder(d).table
+    assert table["representation"].to_list()[:3] == [
+        "list[np.float32]",
+        "list[float]",
+        "NDArray[object]",
+    ]
+    assert table["representation"].to_list()[-1] == "CuPy float32 (A100)"
+    assert table["ns per element"].is_sorted(descending=True)
+
+
+def test_ladder_rows_borrowed_from_other_sizes_are_size_insensitive(d):
+    quad = d.runs["cpu_dense"].filter(
+        data.ALLOC_COLD
+        & (pl.col("operation") == "add")
+        & (pl.col("implementation") == "quad-sleef")
+    )["ns_elem"].drop_nulls()
+    assert quad.max() / quad.min() < 1.06
+    longdouble = d.runs["cpu_sweep"].filter(
+        data.ALLOC_COLD
+        & (pl.col("operation") == "add")
+        & (pl.col("implementation") == "longdouble64")
+        & pl.col("n").is_in([4_000, 64_000])
+    )["ns_elem"]
+    assert longdouble.max() / longdouble.min() < 1.15
+
+
+def test_crossover_annotation_is_computed_between_measured_sizes(d):
+    table = figures.cpu_vs_gpu(d).table
+    crossover = figures.cpu_gpu_crossover(d)
+    cpu = table.filter(pl.col("machine").str.starts_with("x86"))
+    assert cpu["elements"].min() < crossover < cpu["elements"].max()
