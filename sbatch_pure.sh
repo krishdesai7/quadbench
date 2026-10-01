@@ -8,8 +8,9 @@
 #SBATCH -e slurm-%j.out
 
 # Pure-Python containers (list[float], list[np.float32], NDArray[object]) next
-# to the native dtypes. CPU only, single-threaded: the -c 32 is there to get a
-# shared-QOS slice with enough memory, not because anything uses the cores.
+# to the native dtypes. CPU only, single-threaded. No -c: the shared QOS then
+# hands out one core and its proportional share of memory (~4 GB), which is why
+# --budget-gb is kept small below.
 # Writes to a NEW run directory, so nothing already in data/ is touched:
 #
 #   data/cpu_pure   9 sizes, 400 to 4M elements (n = 100 .. 1M)
@@ -18,7 +19,11 @@
 # trend is already unambiguous. --max-call-ms drops anything slower than 2 s.
 # Rough cost: 25-40 min, dominated by py-list-f32 at the top two sizes.
 #
-# Submit from the repo root:   sbatch sbatch_pure.sh
+# Submit from the repo root, naming the account on the command line:
+#   sbatch -A m3246 sbatch_pure.sh
+# SBATCH_ACCOUNT in the environment (e.g. m3246_g) outranks the #SBATCH -A line
+# above, and a GPU account with -C cpu is rejected as "does not match any
+# supported policy".
 
 cd "${SLURM_SUBMIT_DIR:-$PWD}" || exit 1
 
@@ -35,7 +40,7 @@ fi
 rm -f "$NPZ"
 if ! uv run bench_pure.py \
     --sweep 100,320,1000,3200,10000,32000,100000,320000,1000000 \
-    -r 30 --budget-gb 8 --max-call-ms 2000 --tag pure; then
+    -r 30 --budget-gb 2 --max-call-ms 2000 --tag pure; then
     echo "FAILED: bench_pure.py exited nonzero"
     [[ -e "$NPZ" ]] || exit 1
     echo "  a partial checkpoint exists; keeping it"
