@@ -5,7 +5,7 @@ description = "Add your description here"
 authors = [
     { name = "krishdesai7", email = "27725015+krishdesai7@users.noreply.github.com" }
 ]
-requires-python = ">=3.13, <3.14"
+requires-python = ">=3.14.7"
 dependencies = [
     "altair>=6.2.2",
     "cupy-cuda13x>=14.1.1 ; platform_machine == 'x86_64' and sys_platform == 'linux'",
