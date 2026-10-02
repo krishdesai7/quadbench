@@ -158,7 +158,7 @@ def _table_view(frame: pl.DataFrame, label: str) -> HTML:
 def show(*figures: Figure) -> None:
     """Display each chart followed by its collapsed table view."""
     for figure in figures:
-        display(figure.chart)
+        display(figure.chart.interactive())  # ty: ignore[unresolved-attribute]
         if figure.table is not None:
             display(_table_view(figure.table, figure.label))
 

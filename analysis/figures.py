@@ -24,6 +24,7 @@ from analysis.data import (
     OP_ORDER,
     OUT_COLD,
     OUT_HOT,
+    UNARY,
     AnalysisData,
     allocation_penalty,
     gpu_ceiling_rows,
@@ -950,6 +951,30 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
             for b in range(2, 27)
         ]
     )
+    # Bytes per element fixes the dtype and the number of inputs, and every op in
+    # such a group lands within a few percent of the others. Draw one dot per
+    # group at the median, with a rule from the slowest op to the fastest.
+    groups: pl.DataFrame = (
+        two.sort("gbs")
+        .group_by("card", "b_elem")
+        .agg(
+            pl.col.implementation.first().str.replace("GPU ", "").alias("dtype"),
+            pl.col.operation.is_in(UNARY).first().alias("unary"),
+            pl.col.gbs.median(),
+            pl.col.gbs.min().alias("lo"),
+            pl.col.gbs.max().alias("hi"),
+            pl.col.gelem_s.median(),
+            pl.format("{} {}", "operation", pl.col.gbs.round(0).cast(pl.Int64))
+            .str.join(" · ")
+            .alias("ops"),
+        )
+        .with_columns(
+            pl.when("unary")
+            .then(pl.lit("1 input"))
+            .otherwise(pl.lit("2 inputs"))
+            .alias("inputs")
+        )
+    )
     scale = alt.Scale(domain=cards, range=P["series"][:2])
     x = alt.X(
         shorthand="b_elem:Q",
@@ -963,34 +988,45 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
         scale=alt.Scale(domain=[0, 2100]),
         axis=alt.Axis(labelFontSize=13, titleFontSize=16),
     )
+    color = alt.Color(shorthand="card:N", scale=scale, legend=None)
     tips: list[Tooltip] = [
-        alt.Tooltip(shorthand="operation:N", title="op"),
-        alt.Tooltip(shorthand="implementation:N", title="dtype"),
+        alt.Tooltip(shorthand="card:N", title="card"),
+        alt.Tooltip(shorthand="dtype:N", title="dtype"),
         alt.Tooltip(shorthand="b_elem:Q", title="bytes / element"),
-        alt.Tooltip(shorthand="gbs:Q", title="GB/s", format=",.0f"),
+        alt.Tooltip(shorthand="gbs:Q", title="median GB/s", format=",.0f"),
         alt.Tooltip(shorthand="gelem_s:Q", title="G elements/s", format=".1f"),
+        alt.Tooltip(shorthand="ops:N", title="GB/s by op"),
     ]
+    spread: alt.Chart = (
+        alt.Chart(data=groups)
+        .mark_rule(strokeWidth=2)
+        .encode(
+            x=x, y=alt.Y(shorthand="lo:Q"), y2=alt.Y2(shorthand="hi:Q"), color=color
+        )
+    )
     # The 40GB card is drawn hollow: on the ramp the two cards land on top of
     # each other, and that coincidence is the finding.
     hollow: alt.Chart = (
-        alt.Chart(data=two.filter(pl.col.card == cards[0]))
+        alt.Chart(data=groups.filter(pl.col.card == cards[0]))
         .mark_point(size=160, filled=False, strokeWidth=2)
-        .encode(
-            x=x,
-            y=y,
-            color=alt.Color(shorthand="card:N", scale=scale, legend=None),
-            tooltip=tips,
-        )
+        .encode(x=x, y=y, color=color, tooltip=tips)
     )
     solid: alt.Chart = (
-        alt.Chart(data=two.filter(pl.col.card == cards[1]))
-        .mark_point(size=85)
-        .encode(
-            x=x,
-            y=y,
-            color=alt.Color(shorthand="card:N", scale=scale, legend=None),
-            tooltip=tips,
+        alt.Chart(data=groups.filter(pl.col.card == cards[1]))
+        .mark_point(size=85, filled=True, opacity=1)
+        .encode(x=x, y=y, color=color, tooltip=tips)
+    )
+    # What produces each byte count, under the points it explains.
+    kinds: alt.Chart = (
+        alt.Chart(
+            data=groups.unique("b_elem").select(
+                "b_elem",
+                pl.concat_list("dtype", "inputs").alias("t"),
+                pl.lit(170.0).alias("y"),
+            )
         )
+        .mark_text(fontSize=12, lineHeight=14, color=P["ink2"])  # ty: ignore[invalid-argument-type]
+        .encode(x=x, y=alt.Y(shorthand="y:Q"), text=alt.Text(shorthand="t:N"))
     )
     dashed: alt.Chart = (
         alt.Chart(data=model)
@@ -1017,8 +1053,13 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
                 data=[
                     {
                         "x": 2.4,
-                        "y": 1990.0,
+                        "y": 2100.0,
                         "t": f"dashed: {rate:.0f} G elements/s × bytes, capped at the card's memory limit",
+                    },
+                    {
+                        "x": 2.4,
+                        "y": 1985.0,
+                        "t": "dots: the median op at each byte count; bars: slowest to fastest op",
                     },
                 ]
             )
@@ -1031,7 +1072,7 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
         )
     )
     chart: alt.LayerChart | alt.FacetChart = (
-        dashed + hollow + solid + labels + note
+        dashed + spread + hollow + solid + kinds + labels + note
     ).properties(
         width=540,
         height=320,
