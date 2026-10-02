@@ -922,19 +922,19 @@ def gpu_bandwidth_by_size(d: AnalysisData) -> Figure:
 
 def gpu_ceilings(d: AnalysisData) -> tuple[pl.DataFrame, pl.DataFrame]:
     """Return (cells, per-card limits) for the two-ceiling model."""
-    cells = pl.concat(
-        [
-            gpu_ceiling_rows(d.runs, d.meta, "gpu_sweep"),
-            gpu_ceiling_rows(d.runs, d.meta, "gpu_sweep80"),
+    cells: pl.DataFrame = pl.concat(
+        items=[
+            gpu_ceiling_rows(d.runs, metadata=d.meta, run="gpu_sweep"),
+            gpu_ceiling_rows(d.runs, metadata=d.meta, run="gpu_sweep80"),
         ]
     )
-    limits = (
+    limits: pl.DataFrame = (
         cells.group_by("card")
         .agg(
-            pl.col("gelem_s").filter(pl.col("gelem_s") > 150).mean().alias("elem"),
-            pl.col("gbs").max().alias("bw"),
+            pl.col.gelem_s.filter(pl.col.gelem_s > 150).mean().alias(name="elem"),
+            pl.col.gbs.max().alias(name="bw"),
         )
-        .sort("card")
+        .sort(by="card")
     )
     return cells, limits
 
@@ -955,24 +955,28 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
     # such a group lands within a few percent of the others. Draw one dot per
     # group at the median, with a rule from the slowest op to the fastest.
     groups: pl.DataFrame = (
-        two.sort("gbs")
+        two.sort(by="gbs")
         .group_by("card", "b_elem")
         .agg(
-            pl.col.implementation.first().str.replace("GPU ", "").alias("dtype"),
-            pl.col.operation.is_in(UNARY).first().alias("unary"),
+            pl.col.implementation.first()
+            .str.replace(pattern="GPU ", value="")
+            .alias(name="dtype"),
+            pl.col.operation.is_in(other=UNARY).first().alias(name="unary"),
             pl.col.gbs.median(),
-            pl.col.gbs.min().alias("lo"),
-            pl.col.gbs.max().alias("hi"),
+            pl.col.gbs.min().alias(name="lo"),
+            pl.col.gbs.max().alias(name="hi"),
             pl.col.gelem_s.median(),
-            pl.format("{} {}", "operation", pl.col.gbs.round(0).cast(pl.Int64))
-            .str.join(" · ")
-            .alias("ops"),
+            pl.format(
+                "{} {}", "operation", pl.col.gbs.round(decimals=0).cast(dtype=pl.Int64)
+            )
+            .str.join(delimiter=" · ")
+            .alias(name="ops"),
         )
         .with_columns(
             pl.when("unary")
-            .then(pl.lit("1 input"))
-            .otherwise(pl.lit("2 inputs"))
-            .alias("inputs")
+            .then(statement=pl.lit(value="1 input"))
+            .otherwise(statement=pl.lit(value="2 inputs"))
+            .alias(name="inputs")
         )
     )
     scale = alt.Scale(domain=cards, range=P["series"][:2])
@@ -1019,10 +1023,10 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
     # What produces each byte count, under the points it explains.
     kinds: alt.Chart = (
         alt.Chart(
-            data=groups.unique("b_elem").select(
+            data=groups.unique(subset="b_elem").select(
                 "b_elem",
-                pl.concat_list("dtype", "inputs").alias("t"),
-                pl.lit(170.0).alias("y"),
+                pl.concat_list("dtype", "inputs").alias(name="t"),
+                pl.lit(value=170.0).alias(name="y"),
             )
         )
         .mark_text(fontSize=12, lineHeight=14, color=P["ink2"])  # ty: ignore[invalid-argument-type]
@@ -1077,7 +1081,7 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
         width=540,
         height=320,
         title=alt.Title(
-            text="Every CuPy elementwise kernel hits one of two limits: elements per second, or memory bandwidth",
+            text="CuPy elementwise kernels hit one of two limits: elements per second, or memory bandwidth",
             subtitle="CuPy elementwise ops · 100 million elements · hollow = A100-40GB, filled = A100-80GB",
         ),
     )
@@ -1092,67 +1096,94 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
 # Lesson 5 · precision
 # ---------------------------------------------------------------------------
 
-F16_ORDER = ["float16", "float32", "float64"]
+F16_ORDER: list[str] = ["float16", "float32", "float64", "quad-sleef", "longdouble64"]
+# quad-sleef's measurement is null past ~1.3M elements (the harness's time cap), so
+# it can't be labeled at the global max n_elem like the others.
+F16_LABELS: Final[dict[str, str]] = {
+    "float16": "np.float16",
+    "float32": "np.float32",
+    "float64": "np.float64",
+    "quad-sleef": "np.float128",
+}
 
 
 def float16_curve(d: AnalysisData) -> Figure:
-    """float16 against float32 and float64 add cost across size."""
-    rows = (
+    rows: pl.DataFrame = (
         d.runs["cpu_dense"]
-        .filter(OUT_HOT & ADD & pl.col("implementation").is_in(F16_ORDER))
+        .filter(OUT_HOT & ADD & pl.col.implementation.is_in(other=F16_ORDER))
         .select("implementation", "n_elem", "ns_elem", "us")
     )
-    ends = rows.filter(pl.col("n_elem") == rows["n_elem"].max())
+    # Label each line at its own largest *measured* size, not the dataset's
+    # global max: quad-sleef has rows past ~1.3M elements, but ns_elem is null
+    # there (time-capped out), so filtering on the global max silently drops it.
+    ends: pl.DataFrame = (
+        rows.filter(pl.col.ns_elem.is_not_null())
+        .filter(pl.col.n_elem == pl.col.n_elem.max().over("implementation"))
+        .with_columns(
+            pl.col.implementation.replace_strict(old=F16_LABELS).alias(name="label")
+        )
+    )
     x = alt.X(
-        "n_elem:Q",
+        shorthand="n_elem:Q",
         scale=alt.Scale(type="log", nice=False),
         title="elements (log scale)",
-        axis=alt.Axis(format="~s", values=[1_000, 10_000, 100_000, 1_000_000]),
+        axis=alt.Axis(
+            format="~s",
+            values=[1_000, 10_000, 100_000, 1_000_000],
+            labelFontSize=13,
+            titleFontSize=16,
+        ),
     )
     y = alt.Y(
-        "ns_elem:Q",
+        shorthand="ns_elem:Q",
         scale=alt.Scale(type="log"),
         title="ns per element (log scale)",
-        axis=alt.Axis(values=[0.1, 0.3, 1, 3, 10], format="~g"),
+        axis=alt.Axis(
+            values=[0.1, 0.3, 1, 3, 10], labelFontSize=13, titleFontSize=16, format="~g"
+        ),
     )
     color = alt.Color(
-        "implementation:N",
+        shorthand="implementation:N",
         sort=F16_ORDER,
         legend=None,
         scale=alt.Scale(
             domain=F16_ORDER,
-            range=[P["series"][1], P["series"][0], P["shade"]],  # ty: ignore[invalid-argument-type]
+            range=[P["series"][1], P["series"][0], P["shade"], P["ink2"], P["ink"]],  # ty: ignore[invalid-argument-type]
         ),
     )
-    lines = alt.Chart(rows).mark_line(strokeWidth=2.2).encode(x=x, y=y, color=color)
-    dots = lines.mark_point(size=55).encode(
+    lines: alt.Chart = (
+        alt.Chart(data=rows).mark_line(strokeWidth=2.2).encode(x=x, y=y, color=color)
+    )
+    dots: alt.Chart = lines.mark_point(size=55).encode(
         tooltip=[
-            alt.Tooltip("implementation:N", title="dtype"),
-            alt.Tooltip("n_elem:Q", title="elements", format=","),
-            alt.Tooltip("ns_elem:Q", title="ns / element", format=".3f"),
+            alt.Tooltip(shorthand="implementation:N", title="dtype"),
+            alt.Tooltip(shorthand="n_elem:Q", title="elements", format=","),
+            alt.Tooltip(shorthand="ns_elem:Q", title="ns / element", format=".3f"),
         ]
     )
-    labels = (
-        alt.Chart(ends)
+    labels: alt.Chart = (
+        alt.Chart(data=ends)
         .mark_text(align="left", dx=10, fontSize=12.5, fontWeight=500)
-        .encode(x=x, y=y, color=color, text="implementation:N")
+        .encode(x=x, y=y, color=color, text="label:N")
     )
-    chart = (
+    chart: alt.LayerChart | alt.FacetChart = (
         (lines + dots + labels)
         .properties(
             width=480,
             height=300,
             title=alt.Title(
-                "On this CPU, float16 never gets cheaper with size and stays far slower than float32",
+                text="On CPU, float16 never gets cheaper with size and stays far slower than float32",
                 subtitle="NumPy add · same operands every call, preallocated result",
             ),
         )
         .configure_view(clip=False)
     )
-    table = rows.pivot("implementation", index="n_elem", values="ns_elem").sort(
-        "n_elem"
+    table: pl.DataFrame = rows.pivot(
+        on="implementation", index="n_elem", values="ns_elem"
+    ).sort(by="n_elem")
+    return Figure(
+        chart, table, label="Table view · float16 against float32 and float64"
     )
-    return Figure(chart, table, "Table view · float16 against float32 and float64")
 
 
 def float16_mechanism(d: AnalysisData) -> Figure:
