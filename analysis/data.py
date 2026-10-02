@@ -331,19 +331,19 @@ def jax_timer_series(
     runs: dict[str, pl.DataFrame],
     run: str,
     label: str,
-    sizes: list[int],
+    sizes: pl.Series,
     operations: list[str],
 ) -> pl.DataFrame:
     """Select one JAX timing-protocol series for the matched comparison."""
     return (
         runs[run]
         .filter(
-            (pl.col("destination") == "jit")
-            & (pl.col("cache_state") == "cold")
-            & (pl.col("implementation") == "JAX fp32")
-            & pl.col("operation").is_in(operations)
-            & pl.col("n").is_in(sizes)
+            (pl.col.destination == "jit")
+            & (pl.col.cache_state == "cold")
+            & (pl.col.implementation == "JAX fp32")
+            & pl.col.operation.is_in(other=operations)
+            & pl.col.n.is_in(other=sizes)
         )
         .select("operation", "n_elem", "us", "ns_elem", "samples")
-        .with_columns(pl.lit(label).alias("series"))
+        .with_columns(pl.lit(value=label).alias(name="series"))
     )

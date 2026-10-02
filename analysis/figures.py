@@ -17,7 +17,10 @@ from typing import TYPE_CHECKING, cast
 import altair as alt
 import numpy as np
 import polars as pl
+from altair.vegalite.v6.api import Chart, FacetChart, LayerChart
 from altair.vegalite.v6.schema.channels import Tooltip, X
+from polars.dataframe.frame import DataFrame
+from polars.series.series import Series
 
 from analysis.data import (
     ALLOC_COLD,
@@ -198,7 +201,7 @@ def representation_ladder(d: AnalysisData) -> Figure:
         shorthand="representation:N",
         sort=order,
         title=None,
-        axis=alt.Axis(labelFontSize=13, labelLimit=260, labelFont="monospace"),
+        axis=alt.Axis(labelFontSize=16, labelLimit=260, labelFont="monospace"),
     )
     color: alt.Color = _kind_color(KINDS)
     dots: alt.Chart = (
@@ -281,13 +284,13 @@ def bytes_per_element(d: AnalysisData) -> Figure:
         shorthand="representation:N",
         sort=rows["representation"].to_list(),
         title=None,
-        axis=alt.Axis(labelFontSize=13, labelLimit=260, labelFont="monospace"),
+        axis=alt.Axis(labelFontSize=16, labelLimit=260, labelFont="monospace"),
     )
     x = alt.X(
         shorthand="bytes:Q",
         title="bytes per stored number",
         scale=alt.Scale(domain=[0, 60]),
-        axis=alt.Axis(labelFontSize=13, titleFontSize=16),
+        axis=alt.Axis(labelFontSize=16, titleFontSize=16),
     )
     bars: alt.Chart = (
         alt.Chart(data=rows)
@@ -361,7 +364,7 @@ def boxed_vs_unboxed_by_size(d: AnalysisData) -> Figure:
         axis=alt.Axis(
             format="~s",
             values=[1_000, 10_000, 100_000, 1_000_000],
-            labelFontSize=13,
+            labelFontSize=16,
             titleFontSize=16,
         ),
     )
@@ -370,7 +373,7 @@ def boxed_vs_unboxed_by_size(d: AnalysisData) -> Figure:
         scale=alt.Scale(type="log", domain=[0.1, 300], nice=False),
         title="nanoseconds per element (log scale)",
         axis=alt.Axis(
-            values=[0.1, 1, 10, 100], format="~g", labelFontSize=13, titleFontSize=16
+            values=[0.1, 1, 10, 100], format="~g", labelFontSize=16, titleFontSize=16
         ),
     )
     color: alt.Color = _kind_color(KINDS[:2])
@@ -494,7 +497,7 @@ def gpu_call_floor(d: AnalysisData) -> Figure:
         axis=alt.Axis(
             format="~s",
             values=[1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000],
-            labelFontSize=13,
+            labelFontSize=16,
             titleFontSize=16,
         ),
     )
@@ -519,7 +522,7 @@ def gpu_call_floor(d: AnalysisData) -> Figure:
                 axis=alt.Axis(
                     values=[1, 10, 100, 1_000, 10_000],
                     format="~g",
-                    labelFontSize=13,
+                    labelFontSize=16,
                     titleFontSize=16,
                 ),
             ),
@@ -624,7 +627,7 @@ def cpu_vs_gpu(d: AnalysisData) -> Figure:
         axis=alt.Axis(
             format="~s",
             values=[1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000],
-            labelFontSize=13,
+            labelFontSize=16,
             titleFontSize=16,
         ),
     )
@@ -633,7 +636,7 @@ def cpu_vs_gpu(d: AnalysisData) -> Figure:
         scale=alt.Scale(type="log"),
         title="nanoseconds per element (log scale)",
         axis=alt.Axis(
-            values=[0.01, 0.1, 1, 10], format="~g", labelFontSize=13, titleFontSize=16
+            values=[0.01, 0.1, 1, 10], format="~g", labelFontSize=16, titleFontSize=16
         ),
     )
     lines: alt.Chart = (
@@ -713,7 +716,7 @@ def cache_curve(d: AnalysisData) -> Figure:
                 axis=alt.Axis(
                     format="~s",
                     values=[1_000, 10_000, 100_000, 1_000_000],
-                    labelFontSize=13,
+                    labelFontSize=16,
                     titleFontSize=16,
                 ),
             ),
@@ -721,7 +724,7 @@ def cache_curve(d: AnalysisData) -> Figure:
                 shorthand="ns_elem:Q",
                 title="ns per element",
                 scale=alt.Scale(domainMin=0),
-                axis=alt.Axis(labelFontSize=13, titleFontSize=16),
+                axis=alt.Axis(labelFontSize=16, titleFontSize=16),
             ),
             color=alt.Color(
                 shorthand="cache_state:N",
@@ -812,7 +815,7 @@ def cpu_bandwidth(d: AnalysisData) -> Figure:
             x=alt.X(
                 shorthand="gbs:Q",
                 title="Effective bandwidth, GB/s",
-                axis=alt.Axis(labelFontSize=13, titleFontSize=16),
+                axis=alt.Axis(labelFontSize=16, titleFontSize=16),
             ),
             color=alt.Color(
                 shorthand="state:N",
@@ -879,7 +882,7 @@ def gpu_bandwidth_by_size(d: AnalysisData) -> Figure:
                 axis=alt.Axis(
                     format="~s",
                     values=[1_000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000],
-                    labelFontSize=13,
+                    labelFontSize=16,
                     titleFontSize=16,
                 ),
             ),
@@ -887,7 +890,7 @@ def gpu_bandwidth_by_size(d: AnalysisData) -> Figure:
                 shorthand="pct:Q",
                 title=f"% of the {peak:,.0f} GB/s peak",
                 scale=alt.Scale(domain=[0, 100]),
-                axis=alt.Axis(labelFontSize=13, titleFontSize=16),
+                axis=alt.Axis(labelFontSize=16, titleFontSize=16),
             ),
             color=alt.Color(
                 shorthand="implementation:N",
@@ -984,13 +987,13 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
         shorthand="b_elem:Q",
         title="bytes moved per element",
         scale=alt.Scale(domain=[2, 27]),
-        axis=alt.Axis(labelFontSize=13, titleFontSize=16),
+        axis=alt.Axis(labelFontSize=16, titleFontSize=16),
     )
     y = alt.Y(
         shorthand="gbs:Q",
         title="achieved bandwidth, GB/s",
         scale=alt.Scale(domain=[0, 2100]),
-        axis=alt.Axis(labelFontSize=13, titleFontSize=16),
+        axis=alt.Axis(labelFontSize=16, titleFontSize=16),
     )
     color = alt.Color(shorthand="card:N", scale=scale, legend=None)
     tips: list[Tooltip] = [
@@ -1128,7 +1131,7 @@ def float16_curve(d: AnalysisData) -> Figure:
         axis=alt.Axis(
             format="~s",
             values=[1_000, 10_000, 100_000, 1_000_000],
-            labelFontSize=13,
+            labelFontSize=16,
             titleFontSize=16,
         ),
     )
@@ -1137,7 +1140,7 @@ def float16_curve(d: AnalysisData) -> Figure:
         scale=alt.Scale(type="log"),
         title="ns per element (log scale)",
         axis=alt.Axis(
-            values=[0.1, 0.3, 1, 3, 10], labelFontSize=13, titleFontSize=16, format="~g"
+            values=[0.1, 0.3, 1, 3, 10], labelFontSize=16, titleFontSize=16, format="~g"
         ),
     )
     color = alt.Color(
@@ -1210,7 +1213,7 @@ def float16_mechanism(d: AnalysisData) -> Figure:
     mech: pl.DataFrame = mech.join(other=span, on=["op", "implementation"])
     scale = alt.Scale(type="log", domain=[0.1, 12], nice=False)
     axis = alt.Axis(
-        values=[0.1, 0.3, 1, 3, 10], format="~g", labelFontSize=13, titleFontSize=16
+        values=[0.1, 0.3, 1, 3, 10], format="~g", labelFontSize=16, titleFontSize=16
     )
     y = alt.Y(shorthand="op:N", title=None, sort=["add", "mul", "exp"])
     # A dumbbell, not bars: the values span 40×, so the axis is log.
@@ -1243,7 +1246,7 @@ def float16_mechanism(d: AnalysisData) -> Figure:
                 shorthand="path:N",
                 sort=paths,
                 scale=alt.Scale(domain=paths, range=P["series"][:2]),
-                legend=alt.Legend(title=None, labelFontSize=13, titleFontSize=16),
+                legend=alt.Legend(title=None, labelFontSize=16, titleFontSize=16),
             ),
             tooltip=[
                 alt.Tooltip(shorthand="op:N"),
@@ -1343,7 +1346,7 @@ def _vs_f64_x(values: list[float], domain: list[float]) -> alt.X:
                 if_true=alt.value(value=P["ink"]),
                 if_false=alt.value(value=P["ink2"]),
             ),
-            labelFontSize=13,
+            labelFontSize=16,
             titleFontSize=16,
         ),
     )
@@ -1398,7 +1401,7 @@ def dtype_grid(d: AnalysisData) -> Figure:
                     range=[P["series"][0], P["series"][1], P["violet"], P["series"][2]],  # ty: ignore[invalid-argument-type]
                 ),
                 legend=alt.Legend(
-                    title=None, columns=1, labelFontSize=13, titleFontSize=16
+                    title=None, columns=1, labelFontSize=16, titleFontSize=16
                 ),
             ),
             tooltip=[
@@ -1436,12 +1439,14 @@ def int_grid(d: AnalysisData) -> Figure:
     """Every op's cost for every signed integer dtype, relative to float64."""
     ints: pl.DataFrame = (
         vs_float64(d)
-        .filter(pl.col.implementation.str.contains("int"))
+        .filter(pl.col.implementation.str.contains(pattern="int"))
         .with_columns(
-            pl.col.implementation.str.extract(r"(\d+)").cast(pl.Int64).alias("bits"),
-            pl.col.implementation.str.starts_with("u").alias("unsigned"),
+            pl.col.implementation.str.extract(pattern=r"(\d+)")
+            .cast(dtype=pl.Int64)
+            .alias(name="bits"),
+            pl.col.implementation.str.starts_with(prefix="u").alias(name="unsigned"),
         )
-        .with_columns(pl.format("int{}", "bits").alias("width"))
+        .with_columns(pl.format("int{}", "bits").alias(name="width"))
     )
     signed: pl.DataFrame = ints.filter(~pl.col.unsigned)
     # Unsigned types track their signed twins except on div, so only signed are drawn.
@@ -1453,26 +1458,12 @@ def int_grid(d: AnalysisData) -> Figure:
         val=((pl.col.vs_f64_u / pl.col.vs_f64) - 1)
         .abs()
         .max()
-        .pipe(twins.select)
+        .pipe(function=twins.select)
         .item(),
-    )
-    # What NumPy computes each op in, by width: the integer type itself, or a float.
-    computed_in: pl.DataFrame = (
-        signed.sort("bits")
-        .group_by("operation", maintain_order=True)
-        .agg(
-            pl.when(pl.col.result_dtype == pl.col.implementation)
-            .then(pl.lit("the integer type"))
-            .otherwise("result_dtype")
-            .unique(maintain_order=True)
-            .str.join(" / ")
-            .alias("t")
-        )
-        .with_columns(pl.format("in {}", "t").alias("t"))
     )
     widths: list[str] = [f"int{b}" for b in INT_BITS]
     ramp: list[str] = [P["ramp"][1], P["ramp"][3], P["ramp"][5], P["ramp"][6]]
-    x = _vs_f64_x(values=[0.125, 0.25, 0.5, 1, 2, 4, 8], domain=[1 / 16, 10])
+    x: X = _vs_f64_x(values=[0.125, 0.25, 0.5, 1, 2, 4, 8], domain=[1 / 16, 10])
     y = alt.Y(
         shorthand="operation:N",
         sort=INT_OP_ORDER,
@@ -1489,7 +1480,7 @@ def int_grid(d: AnalysisData) -> Figure:
                 shorthand="width:N",
                 sort=widths,
                 scale=alt.Scale(domain=widths, range=ramp),
-                legend=alt.Legend(title=None, orient="top", labelFontSize=13),
+                legend=alt.Legend(title=None, orient="top", labelFontSize=16),
             ),
             tooltip=[
                 alt.Tooltip(shorthand="implementation:N", title="dtype"),
@@ -1499,13 +1490,8 @@ def int_grid(d: AnalysisData) -> Figure:
             ],
         )
     )
-    notes: alt.Chart = (
-        alt.Chart(data=computed_in)
-        .mark_text(align="left", fontSize=12.5, color=P["ink2"])  # ty: ignore[invalid-argument-type]
-        .encode(x=alt.value(552), y=y, text=alt.Text(shorthand="t:N"))
-    )
     chart: alt.LayerChart | alt.FacetChart = (
-        (_float64_rule() + dots + notes)
+        (_float64_rule() + dots)
         .properties(
             width=540,
             height=320,
@@ -1526,143 +1512,165 @@ def int_grid(d: AnalysisData) -> Figure:
     )
 
 
-GPU_PAIRS = ["fp64 / fp32", "fp32 / fp16"]
+GPU_PAIRS: list[str] = ["cp.float64 / cp.float32", "cp.float32 / cp.float16"]
 
 
 def gpu_precision_table(d: AnalysisData) -> pl.DataFrame:
     """Time ratios between adjacent GPU precisions at 100 million elements."""
     return (
         d.runs["gpu_sweep80"]
-        .filter(OUT_HOT & (pl.col("n") == 25_000_000))
-        .pivot("implementation", index="operation", values="us")
+        .filter(OUT_HOT & (pl.col.n == 25_000_000))
+        .pivot(on="implementation", index="operation", values="us")
         .drop_nulls()
         .with_columns(
-            (pl.col("GPU fp64") / pl.col("GPU fp32")).alias(GPU_PAIRS[0]),
-            (pl.col("GPU fp32") / pl.col("GPU fp16")).alias(GPU_PAIRS[1]),
+            (pl.col(name="GPU fp64") / pl.col(name="GPU fp32")).alias(
+                name=GPU_PAIRS[0]
+            ),
+            (pl.col(name="GPU fp32") / pl.col(name="GPU fp16")).alias(
+                name=GPU_PAIRS[1]
+            ),
         )
-        .sort(GPU_PAIRS[1], descending=True)
+        .sort(by=GPU_PAIRS[1], descending=True)
     )
 
 
 def gpu_precision_ratios(d: AnalysisData) -> Figure:
     """How much halving precision actually saves on the GPU, per operation."""
-    ratios = gpu_precision_table(d)
-    long = ratios.unpivot(
-        GPU_PAIRS, index="operation", variable_name="pair", value_name="ratio"
+    ratios: DataFrame = gpu_precision_table(d)
+    long: DataFrame = ratios.unpivot(
+        on=GPU_PAIRS, index="operation", variable_name="pair", value_name="ratio"
     )
-    bars = (
-        alt.Chart(long)
+    bars: Chart = (
+        alt.Chart(data=long)
         .mark_bar(size=10)
         .encode(
             y=alt.Y(
-                "operation:N",
+                shorthand="operation:N",
                 title=None,
-                sort=alt.EncodingSortField("ratio", op="max", order="descending"),
+                sort=alt.EncodingSortField(field="ratio", op="max", order="descending"),
+                axis=alt.Axis(labelFont="monospace"),
             ),
-            yOffset=alt.YOffset("pair:N", sort=GPU_PAIRS),
+            yOffset=alt.YOffset(shorthand="pair:N", sort=GPU_PAIRS),
             x=alt.X(
-                "ratio:Q",
+                shorthand="ratio:Q",
                 title="time ratio (2.0 = halving precision halves the time)",
                 scale=alt.Scale(domain=[0, 2.3], nice=False),
+                axis=alt.Axis(labelFontSize=16, titleFontSize=16),
             ),
             color=alt.Color(
-                "pair:N",
+                shorthand="pair:N",
                 sort=GPU_PAIRS,
                 scale=alt.Scale(domain=GPU_PAIRS, range=P["series"][:2]),
-                legend=alt.Legend(title=None),
+                legend=alt.Legend(title=None, labelFontSize=16),
             ),
             tooltip=[
-                alt.Tooltip("operation:N", title="op"),
-                alt.Tooltip("pair:N", title="ratio"),
-                alt.Tooltip("ratio:Q", format=".2f"),
+                alt.Tooltip(shorthand="operation:N", title="op"),
+                alt.Tooltip(shorthand="pair:N", title="ratio"),
+                alt.Tooltip(shorthand="ratio:Q", format=".2f"),
             ],
         )
     )
-    values = bars.mark_text(align="left", dx=4, fontSize=11).encode(
-        text=alt.Text("ratio:Q", format=".2f"), color=alt.value(P["ink2"])
+    values: Chart = bars.mark_text(align="left", dx=4, fontSize=11).encode(
+        text=alt.Text(shorthand="ratio:Q", format=".2f"),
+        color=alt.value(value=P["ink2"]),
     )
-    chart = (bars + values + _vrule(2.0)).properties(
+    chart: FacetChart | LayerChart = (bars + values + _vrule(x=2.0)).properties(
         width=440,
         height=340,
         title=alt.Title(
-            "On the GPU, halving precision rarely halves the time",
+            text="On the GPU, halving precision rarely halves the time",
             subtitle="CuPy on an A100-80GB · 100 million elements · same operands every call",
         ),
     )
-    return Figure(chart, ratios, "Table view · precision ratios")
+    return Figure(chart, table=ratios, label="Table view · precision ratios")
 
 
 # ---------------------------------------------------------------------------
 # Lesson 6 · allocation
 # ---------------------------------------------------------------------------
 
-COMPONENTS = ["cold destination (out_pool − out)", "allocation (alloc − out_pool)"]
+COMPONENTS: list[str] = [
+    "cold destination (out_pool − out)",
+    "allocation (alloc − out_pool)",
+]
 
 
 def destination_decomposition(d: AnalysisData) -> Figure:
     """Split the cost of a fresh result buffer into cache and allocation parts."""
-    three = (
+    three: DataFrame = (
         d.runs["cpu_alloc"]
-        .filter((pl.col("cache_state") == "cold") & ADD)
-        .pivot("destination", index=["implementation", "n_elem"], values="us")
+        .filter((pl.col.cache_state == "cold") & ADD)
+        .pivot(on="destination", index=["implementation", "n_elem"], values="us")
         .with_columns(
-            ((pl.col("out_pool") - pl.col("out")) / pl.col("out") * 100).alias(
-                COMPONENTS[0]
+            ((pl.col.out_pool - pl.col.out) / pl.col.out * 100).alias(
+                name=COMPONENTS[0]
             ),
-            ((pl.col("alloc") - pl.col("out_pool")) / pl.col("out") * 100).alias(
-                COMPONENTS[1]
+            ((pl.col.alloc - pl.col.out_pool) / pl.col.out * 100).alias(
+                name=COMPONENTS[1]
             ),
         )
         .unpivot(
-            COMPONENTS,
+            on=COMPONENTS,
             index=["implementation", "n_elem"],
             variable_name="component",
             value_name="pct",
         )
-        .sort("implementation", "n_elem")
+        .sort(by=["implementation", "n_elem"])
     )
-    zero = (
-        alt.Chart(pl.DataFrame({"y": [0.0]})).mark_rule(color=P["ink2"]).encode(y="y:Q")  # ty: ignore[invalid-argument-type]
+    zero: Chart = (
+        alt.Chart(data=pl.DataFrame(data={"y": [0.0]}))
+        .mark_rule(color=P["ink2"])  # ty: ignore[invalid-argument-type]
+        .encode(y="y:Q")
     )
-    lines = (
+    lines: Chart = (
         alt.Chart()
         .mark_line(point=alt.OverlayMarkDef(size=50))
         .encode(
             x=alt.X(
-                "n_elem:Q",
+                shorthand="n_elem:Q",
                 scale=alt.Scale(type="log"),
                 title="elements (log scale)",
-                axis=alt.Axis(format="~s", values=[10_000, 100_000, 1_000_000]),
+                axis=alt.Axis(
+                    format="~s",
+                    values=[10_000, 100_000, 1_000_000],
+                    labelFontSize=16,
+                    titleFontSize=16,
+                ),
             ),
-            y=alt.Y("pct:Q", title="% of the preallocated time"),
+            y=alt.Y(
+                shorthand="pct:Q",
+                title="% of the preallocated time",
+                axis=alt.Axis(labelFontSize=16, titleFontSize=16),
+            ),
             color=alt.Color(
-                "component:N",
+                shorthand="component:N",
                 sort=COMPONENTS,
                 scale=alt.Scale(domain=COMPONENTS, range=P["series"][:2]),
-                legend=alt.Legend(title=None),
+                legend=alt.Legend(title=None, labelFontSize=16, titleFontSize=16),
             ),
             tooltip=[
-                alt.Tooltip("implementation:N", title="dtype"),
-                alt.Tooltip("n_elem:Q", title="elements", format=","),
-                alt.Tooltip("component:N"),
-                alt.Tooltip("pct:Q", title="% of out=", format=".1f"),
+                alt.Tooltip(shorthand="implementation:N", title="dtype"),
+                alt.Tooltip(shorthand="n_elem:Q", title="elements", format=","),
+                alt.Tooltip(shorthand="component:N"),
+                alt.Tooltip(shorthand="pct:Q", title="% of out=", format=".1f"),
             ],
         )
     )
-    chart = (
+    chart: FacetChart = (
         alt.layer(zero, lines)
         .properties(width=215, height=230)
         .facet(
             column=alt.Column(
-                "implementation:N",
+                shorthand="implementation:N",
                 title=None,
                 sort=["float32", "float64", "int32", "int64"],
+                header=alt.Header(labelFont="monospace"),
             ),
             data=three,
         )
         .properties(
             title=alt.Title(
-                "A result buffer that has left the cache costs extra; allocating a new one is free until the largest size",
+                text="A result buffer that has left the cache costs extra; allocating a new one is free until the largest size",
                 subtitle=[
                     "NumPy add · cold operands · out_pool = rotate through preallocated buffers too big to stay cached",
                     "below 32 MiB a fresh allocation reuses the block just freed, which is still in cache",
@@ -1670,10 +1678,12 @@ def destination_decomposition(d: AnalysisData) -> Figure:
             )
         )
     )
-    return Figure(chart, three, "Table view · destination cost decomposition")
+    return Figure(
+        chart, table=three, label="Table view · destination cost decomposition"
+    )
 
 
-SIDES = ["at or below 32 MiB", "above 32 MiB"]
+SIDES: list[str] = ["at or below 32 MiB", "above 32 MiB"]
 MMAP_THRESHOLD_MIB = 32
 
 
@@ -1681,71 +1691,82 @@ def allocation_cliff_rows(d: AnalysisData) -> pl.DataFrame:
     """Allocating-form penalty for every pooled cell, tagged by threshold side."""
     return pl.concat(
         [
-            allocation_penalty(d.runs, "cpu_dense"),
-            allocation_penalty(d.runs, "cpu_alloc"),
+            allocation_penalty(d.runs, run="cpu_dense"),
+            allocation_penalty(d.runs, run="cpu_alloc"),
             allocation_penalty(
                 d.runs, "cpu_dram50", operations=("add", "mul", "div", "sqrt", "exp")
             ),
         ]
     ).with_columns(
-        pl.when(pl.col("result_mib") > MMAP_THRESHOLD_MIB)
-        .then(pl.lit(SIDES[1]))
-        .otherwise(pl.lit(SIDES[0]))
-        .alias("side")
+        pl.when(pl.col.result_mib > MMAP_THRESHOLD_MIB)
+        .then(statement=pl.lit(value=SIDES[1]))
+        .otherwise(statement=pl.lit(value=SIDES[0]))
+        .alias(name="side")
     )
 
 
 def allocation_cliff(d: AnalysisData) -> Figure:
     """Allocation penalty against result-buffer size, across three runs."""
-    cliff = allocation_cliff_rows(d)
-    zero = (
+    cliff: DataFrame = allocation_cliff_rows(d)
+    zero: Chart = (
         alt.Chart(pl.DataFrame({"y": [0.0]})).mark_rule(color=P["grid"]).encode(y="y:Q")  # ty: ignore[invalid-argument-type]
     )
-    dots = (
-        alt.Chart(cliff)
+    dots: Chart = (
+        alt.Chart(data=cliff)
         .mark_point(size=95, opacity=0.85)
         .encode(
             x=alt.X(
-                "result_mib:Q",
+                shorthand="result_mib:Q",
                 scale=alt.Scale(type="log"),
                 title="result buffer size, MiB (log scale)",
-                axis=alt.Axis(values=[0.05, 0.5, 5, 32, 61], format="~g"),
+                axis=alt.Axis(
+                    values=[0.05, 0.5, 5, 32, 61],
+                    format="~g",
+                    labelFontSize=16,
+                    titleFontSize=16,
+                ),
             ),
-            y=alt.Y("pct:Q", title="allocating form, % slower than preallocated"),
+            y=alt.Y(
+                shorthand="pct:Q",
+                title="allocating form, % slower than preallocated",
+                axis=alt.Axis(labelFontSize=16, titleFontSize=16),
+            ),
             color=alt.Color(
-                "side:N",
+                shorthand="side:N",
                 sort=SIDES,
                 scale=alt.Scale(domain=SIDES, range=[P["context"], P["series"][1]]),  # ty: ignore[invalid-argument-type]
-                legend=alt.Legend(title=None),
+                legend=alt.Legend(title=None, labelFontSize=16, titleFontSize=16),
             ),
             tooltip=[
-                alt.Tooltip("run:N"),
-                alt.Tooltip("operation:N", title="op"),
-                alt.Tooltip("implementation:N", title="dtype"),
-                alt.Tooltip("result_mib:Q", title="result MiB", format=".2f"),
-                alt.Tooltip("pct:Q", title="% vs out=", format=".1f"),
+                alt.Tooltip(shorthand="run:N"),
+                alt.Tooltip(shorthand="operation:N", title="op"),
+                alt.Tooltip(shorthand="implementation:N", title="dtype"),
+                alt.Tooltip(shorthand="result_mib:Q", title="result MiB", format=".2f"),
+                alt.Tooltip(shorthand="pct:Q", title="% vs out=", format=".1f"),
             ],
         )
     )
-    threshold = _vrule(float(MMAP_THRESHOLD_MIB), dash=[4, 3]) + _note(
-        float(MMAP_THRESHOLD_MIB),
-        "glibc mmap threshold, 32 MiB",
-        12,
+    threshold: LayerChart | FacetChart = _vrule(
+        x=float(MMAP_THRESHOLD_MIB), dash=[4, 3]
+    ) + _note(
+        x=float(MMAP_THRESHOLD_MIB),
+        text="glibc mmap threshold, 32 MiB",
+        y_px=12,
         align="right",
         dx=-7,
     )
-    chart = (zero + dots + threshold).properties(
+    chart: FacetChart | LayerChart = (zero + dots + threshold).properties(
         width=520,
         height=300,
         title=alt.Title(
-            "Allocating a result is free up to 32 MiB, then suddenly is not",
+            text="Allocating a result is free up to 32 MiB, then suddenly is not",
             subtitle="NumPy · cold operands · three runs pooled · above the threshold every call maps and unmaps fresh memory",
         ),
     )
     return Figure(
         chart,
-        cliff.sort("result_mib"),
-        "Table view · allocation penalty by buffer size",
+        table=cliff.sort(by="result_mib"),
+        label="Table view · allocation penalty by buffer size",
     )
 
 
@@ -1875,39 +1896,54 @@ def fusion_table(d: AnalysisData) -> pl.DataFrame:
 
 def jit_fusion(d: AnalysisData) -> Figure:
     """How much compiling the whole expression saves, per op and dtype."""
-    fusion = fusion_table(d)
-    fused = fusion.filter(pl.col("operation") != "add")["JIT speedup"]
-    points = (
+    fusion: DataFrame = fusion_table(d)
+    fused: Series = fusion.filter(pl.col.operation != "add")["JIT speedup"]
+    points: Chart = (
         alt.Chart()
         .mark_point(size=110, color=P["series"][0])
         .encode(
             x=alt.X(
-                "JIT speedup:Q",
+                shorthand="JIT speedup:Q",
                 scale=alt.Scale(type="log", domain=[0.8, 128]),
                 title="eager ÷ JIT time (log)",
-                axis=alt.Axis(values=[1, 4, 16, 64], format="~g"),
+                axis=alt.Axis(
+                    values=[1, 4, 16, 64],
+                    format="~g",
+                    labelFontSize=16,
+                    titleFontSize=16,
+                ),
             ),
-            y=alt.Y("operation:N", sort=FUSION_OPS, title=None),
+            y=alt.Y(
+                shorthand="operation:N",
+                sort=FUSION_OPS,
+                title=None,
+                axis=alt.Axis(labelFont="monospace"),
+            ),
             tooltip=[
-                alt.Tooltip("implementation:N", title="dtype"),
-                alt.Tooltip("operation:N"),
-                alt.Tooltip("eager:Q", title="eager µs", format=",.1f"),
-                alt.Tooltip("jit:Q", title="JIT µs", format=",.1f"),
-                alt.Tooltip("JIT speedup:Q", title="speedup", format=".2f"),
+                alt.Tooltip(shorthand="implementation:N", title="dtype"),
+                alt.Tooltip(shorthand="operation:N"),
+                alt.Tooltip(shorthand="eager:Q", title="eager µs", format=",.1f"),
+                alt.Tooltip(shorthand="jit:Q", title="JIT µs", format=",.1f"),
+                alt.Tooltip(shorthand="JIT speedup:Q", title="speedup", format=".2f"),
             ],
         )
     )
-    unity = alt.Chart().mark_rule(color=P["ink2"]).encode(x=alt.datum(1.0))  # ty: ignore[invalid-argument-type]
-    chart = (
+    unity: Chart = alt.Chart().mark_rule(color=P["ink2"]).encode(x=alt.datum(datum=1.0))  # ty: ignore[invalid-argument-type]
+    chart: FacetChart = (
         alt.layer(unity, points)
         .properties(width=185, height=150)
         .facet(
-            column=alt.Column("implementation:N", sort=JAX_DTYPES, title=None),
+            column=alt.Column(
+                shorthand="implementation:N",
+                sort=JAX_DTYPES,
+                title=None,
+                header=alt.Header(labelFont="monospace"),
+            ),
             data=fusion,
         )
         .properties(
             title=alt.Title(
-                f"Compiling a whole expression is {fused.min():.0f}–{fused.max():.0f}× faster than running it step by step",
+                text=f"Compiling a whole expression is {fused.min():.0f}–{fused.max():.0f}× faster than running it step by step",
                 subtitle="JAX on an A100-80GB · 100 million elements · add is the control: one step, nothing to fuse",
             )
         )
@@ -1956,56 +1992,73 @@ def cpu_framework_table(d: AnalysisData) -> pl.DataFrame:
 
 def jax_vs_numpy_cpu(d: AnalysisData) -> Figure:
     """Same-node NumPy and JAX CPU time ratios."""
-    table = cpu_framework_table(d)
-    points = (
-        alt.Chart(table)
+    table: DataFrame = cpu_framework_table(d)
+    points: Chart = (
+        alt.Chart(data=table)
         .mark_point(size=120, color=P["series"][0])
         .encode(
             x=alt.X(
-                "NumPy / JAX time:Q",
+                shorthand="NumPy / JAX time:Q",
                 scale=alt.Scale(type="log"),
                 title="NumPy time ÷ JAX time (log scale)",
-                axis=alt.Axis(values=[1, 2, 5, 10, 20, 50], format="~g"),
+                axis=alt.Axis(
+                    values=[1, 2, 5, 10, 20, 50],
+                    format="~g",
+                    labelFontSize=16,
+                    titleFontSize=16,
+                ),
             ),
-            y=alt.Y("operation:N", sort=CPU_OPS, title=None),
+            y=alt.Y(
+                shorthand="operation:N",
+                sort=CPU_OPS,
+                title=None,
+                axis=alt.Axis(labelFont="monospace"),
+            ),
             tooltip=[
-                alt.Tooltip("operation:N"),
-                alt.Tooltip("NumPy eager:Q", title="NumPy µs", format=",.1f"),
-                alt.Tooltip("JAX JIT:Q", title="JAX µs", format=",.1f"),
-                alt.Tooltip("NumPy / JAX time:Q", title="ratio", format=".2f"),
+                alt.Tooltip(shorthand="operation:N"),
+                alt.Tooltip(shorthand="NumPy eager:Q", title="NumPy µs", format=",.1f"),
+                alt.Tooltip(shorthand="JAX JIT:Q", title="JAX µs", format=",.1f"),
+                alt.Tooltip(
+                    shorthand="NumPy / JAX time:Q", title="ratio", format=".2f"
+                ),
             ],
         )
     )
-    labels = points.mark_text(align="left", dx=10, fontSize=12, color=P["ink2"]).encode(  # pyrefly: ignore[bad-argument-type]
-        text=alt.Text("NumPy / JAX time:Q", format=".1f")
-    )
-    chart = (_vrule(1.0) + points + labels).properties(
+    labels: Chart = points.mark_text(
+        align="left",
+        dx=10,
+        fontSize=16,
+        color=P["ink2"],  # ty: ignore[invalid-argument-type]
+    ).encode(text=alt.Text(shorthand="NumPy / JAX time:Q", format=".1f"))
+    chart: FacetChart | LayerChart = (_vrule(x=1.0) + points + labels).properties(
         width=500,
         height=220,
         title=alt.Title(
-            "On the same CPU, compiled JAX beats NumPy on every operation measured",
+            text="On the same CPU, compiled JAX beats NumPy on every operation measured",
             subtitle="10 million elements · fp32 · same operands every call · thread pools not constrained",
         ),
     )
-    return Figure(chart, table, "Table view · same-node CPU comparison")
+    return Figure(chart, table, label="Table view · same-node CPU comparison")
 
 
 # ---------------------------------------------------------------------------
 # Lesson 8 · measurement
 # ---------------------------------------------------------------------------
 
-TIMER_SERIES = ["JAX pipelined", "JAX blocking", "CuPy host timer"]
-LATENCY_OPS = ["add", "exp"]
+TIMER_SERIES: Final[list[str]] = ["JAX pipelined", "JAX blocking", "CuPy host timer"]
+LATENCY_OPS: Final[list[str]] = ["add", "exp"]
 
 
 def timer_rows(d: AnalysisData) -> pl.DataFrame:
     """JAX pipelined, JAX blocking, and CuPy host-timed fp32 calls at matched sizes."""
-    sizes = d.meta["jax_latency"]["sizes"]
+    sizes: Series = d.meta["jax_latency"]["sizes"]
     return pl.concat(
-        [
-            jax_timer_series(d.runs, "jax_dense", TIMER_SERIES[0], sizes, LATENCY_OPS),
+        items=[
             jax_timer_series(
-                d.runs, "jax_latency", TIMER_SERIES[1], sizes, LATENCY_OPS
+                d.runs, "jax_dense", TIMER_SERIES[0], sizes, operations=LATENCY_OPS
+            ),
+            jax_timer_series(
+                d.runs, "jax_latency", TIMER_SERIES[1], sizes, operations=LATENCY_OPS
             ),
             d.runs["gpu_host80"]
             .filter(
