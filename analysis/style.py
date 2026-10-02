@@ -24,6 +24,9 @@ P: dict[str, list[str] | str] = {
     "grid": "#e1e0d9",
     "axis": "#c3c2b7",
     "series": ["#2a78d6", "#eb6834", "#1baf7a"],
+    # The reference palette's violet slot: the fourth hue when a chart needs one.
+    # Yellow (the next slot) is too close to orange when every pair can meet.
+    "violet": "#4a3aa7",
     "shade": "#9ec5f4",
     "context": "#c3c2b7",
     "ramp": [

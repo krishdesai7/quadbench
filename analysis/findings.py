@@ -13,7 +13,7 @@ from collections.abc import Callable
 import polars as pl
 
 from analysis import figures
-from analysis.data import ALLOC_COLD, OUT_COLD, OUT_HOT, AnalysisData
+from analysis.data import ALLOC_COLD, OUT_COLD, AnalysisData
 
 Finding = tuple[float, Callable[[float], str]]
 ADD = pl.col("operation") == "add"
@@ -125,10 +125,10 @@ def _containers(d: AnalysisData) -> dict[str, Finding]:
         "list_vs_f64_min": (matched["ratio"].min(), fmt_ratio),
         "list_vs_f64_max": (matched["ratio"].max(), fmt_ratio),
         "f32_list_vs_float_list": (ns["list[np.float32]"] / lst, fmt_ratio),
-        "obj_array_vs_f64": (ns["NDArray[object]"] / f64, fmt_ratio),
-        "list_vs_quad": (lst / ns["NDArray[quad] †"], fmt_ratio),
+        "obj_array_vs_f64": (ns["NDArray[float]"] / f64, fmt_ratio),
+        "list_vs_quad": (lst / ns["NDArray[np.float128]†"], fmt_ratio),
         "f64_vs_f32": (f64 / f32, fmt_ratio),
-        "list_vs_gpu": (lst / ns["CuPy float32 (A100)"], fmt_ratio),
+        "list_vs_gpu": (lst / ns["NDArray[cp.float32] (A100)"], fmt_ratio),
         "list_bytes": (d.pure_memory["py-list-float"], fmt_bytes),
         "list_size_vs_f64": (d.pure_memory["py-list-float"] / 8, lambda x: f"{x:.0f}×"),
         "list_size_vs_f32": (d.pure_memory["py-list-float"] / 4, lambda x: f"{x:.0f}×"),
@@ -276,23 +276,34 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
     def span(impl: str) -> pl.Series:
         return grid.filter(pl.col("implementation") == impl)["vs_f64"]
 
-    sweep = d.runs["cpu_sweep"].filter(OUT_HOT & (pl.col("n") == 64_000))
-    base = sweep.filter(pl.col("implementation") == "float64").select(
-        "operation", pl.col("ns_elem").alias("base")
+    ints = figures.int_grid(d).table.with_columns(
+        pl.col("implementation").str.extract(r"(\d+)").cast(pl.Int64).alias("bits"),
+        pl.col("implementation").str.starts_with("u").alias("unsigned"),
     )
-    hardware = (
-        sweep.filter(
-            ~pl.col("implementation").is_in(
-                ["quad-sleef", "longdouble64", "float16", "float64"]
-            )
-        )
-        .join(base, on="operation")
-        .with_columns((pl.col("ns_elem") / pl.col("base")).alias("x"))
-        .drop_nulls("x")
+    # Arithmetic NumPy does in the integer type itself: cost tracks width.
+    arith = ints.filter(
+        pl.col("operation").is_in(["add", "mul", "muladd", "muladd_accum"])
     )
+    halving = (
+        arith.filter(~pl.col("unsigned"))
+        .sort("operation", "bits")
+        .with_columns(
+            (pl.col("vs_f64").shift(-1) / pl.col("vs_f64"))
+            .over("operation")
+            .alias("step")
+        )["step"]
+        .drop_nulls()
+    )
+
+    def ints_where(op: str | None = None, bits: int | None = None) -> pl.Series:
+        rows = arith if op is None else ints.filter(pl.col("operation") == op)
+        return (rows if bits is None else rows.filter(pl.col("bits") == bits))["vs_f64"]
+
     # NumPy computes sqrt of int8/uint8 in float16, so those cells pay the
-    # float16 conversion cost and are reported separately.
-    in_f16 = pl.col("result_dtype") == "float16"
+    # float16 conversion cost.
+    in_f16 = ints.filter(
+        (pl.col("operation") == "sqrt") & (pl.col("result_dtype") == "float16")
+    )
     quad = grid.filter(pl.col("implementation") == "quad-sleef")
 
     ratios = figures.gpu_precision_table(d)
@@ -315,8 +326,19 @@ def _precision(d: AnalysisData) -> dict[str, Finding]:
         "f16_widened_ns": (via["float16"], fmt_ns),
         "f32_native_ns": (native["float32"], fmt_ns),
         "f32_widened_ns": (via["float32"], fmt_ns),
-        "hardware_vs_f64_max": (hardware.filter(~in_f16)["x"].max(), fmt_ratio),
-        "int8_sqrt_vs_f64": (hardware.filter(in_f16)["x"].max(), fmt_ratio),
+        "f32_vs_f64_min": (span("float32").min(), fmt_low),
+        "f32_vs_f64_max": (span("float32").max(), fmt_ratio),
+        "int64_arith_min": (ints_where(bits=64).min(), fmt_low),
+        "int64_arith_max": (ints_where(bits=64).max(), fmt_ratio),
+        "int8_arith_min": (ints_where(bits=8).min(), fmt_low),
+        "int8_arith_max": (ints_where(bits=8).max(), fmt_ratio),
+        "int_halving_min": (halving.min(), fmt_low),
+        "int_halving_max": (halving.max(), fmt_ratio),
+        "int_div_min": (ints_where(op="div").min(), fmt_low),
+        "int_div_max": (ints_where(op="div").max(), fmt_ratio),
+        "int8_sqrt_vs_f64": (in_f16["vs_f64"].max(), fmt_ratio),
+        "int_matmul_min": (ints_where(op="matmul").min(), fmt_low),
+        "int_matmul_max": (ints_where(op="matmul").max(), fmt_ratio),
         "quad_vs_f64_min": (span("quad-sleef").min(), fmt_low),
         "quad_vs_f64_max": (span("quad-sleef").max(), fmt_ratio),
         "quad_exp_vs_f64": (

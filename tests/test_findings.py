@@ -136,14 +136,22 @@ def test_jax_runs_are_complete_and_validated(d):
         assert measured.height > 0, run
         assert measured["samples"].min() == 30, run
         assert measured["us"].is_null().sum() == 0, run
-        results = [r for size in d.meta[run]["per_size"].values() for r in size["validation"]]
+        results = [
+            r for size in d.meta[run]["per_size"].values() for r in size["validation"]
+        ]
         assert results and all(r["ok"] for r in results), run
 
 
 def test_jax_metadata(d):
     assert set(d.runs["jax_dense"]["destination"].unique()) == {"eager", "jit"}
     assert set(d.runs["jax_cpu"]["implementation"].unique()) >= {
-        "JAX fp16", "JAX bf16", "JAX fp32", "JAX fp64", "NumPy fp16", "NumPy fp32", "NumPy fp64",
+        "JAX fp16",
+        "JAX bf16",
+        "JAX fp32",
+        "JAX fp64",
+        "NumPy fp16",
+        "NumPy fp32",
+        "NumPy fp64",
     }
     assert d.meta["jax_dense"]["timer"] == "pipelined"
     assert d.meta["jax_latency"]["timer"] == "blocking"
@@ -156,14 +164,23 @@ def test_jax_metadata(d):
 
 @pytest.mark.parametrize(
     ("implementation", "result_dtype", "width"),
-    [("JAX fp16", "float16", 2), ("JAX bf16", "bfloat16", 2), ("JAX fp32", "float32", 4), ("JAX fp64", "float64", 8)],
+    [
+        ("JAX fp16", "float16", 2),
+        ("JAX bf16", "bfloat16", 2),
+        ("JAX fp32", "float32", 4),
+        ("JAX fp64", "float64", 8),
+    ],
 )
 def test_jax_byte_accounting(d, implementation, result_dtype, width):
     row = (
         d.raw["jax_dense"][0]
-        .filter((pl.col("implementation") == implementation) & (pl.col("operation") == "add")
-                & (pl.col("destination") == "jit") & (pl.col("cache_state") == "cold")
-                & pl.col("time_us").is_not_null())
+        .filter(
+            (pl.col("implementation") == implementation)
+            & (pl.col("operation") == "add")
+            & (pl.col("destination") == "jit")
+            & (pl.col("cache_state") == "cold")
+            & pl.col("time_us").is_not_null()
+        )
         .row(0, named=True)
     )
     assert row["result_dtype"] == result_dtype
@@ -181,9 +198,20 @@ def test_summary_tiles_count_every_measurement(d):
     assert "EPYC 7763" in tiles[2][1]
 
 
-def test_hardware_cluster_excludes_cells_numpy_computes_in_float16(v):
-    assert v["hardware_vs_f64_max"] < 3
+def test_float32_stays_near_float64(v):
+    assert 0.1 < v["f32_vs_f64_min"] < v["f32_vs_f64_max"] < 1.2
+
+
+def test_integer_arithmetic_cost_tracks_width(v):
+    assert v["int8_arith_max"] < 0.1
+    assert 0.9 < v["int64_arith_min"] < v["int64_arith_max"] < 1.1
+    assert 2 < v["int_halving_min"] < v["int_halving_max"] < 3
+
+
+def test_integers_converted_to_float(v):
+    assert 1 < v["int_div_min"] < v["int_div_max"] < 3
     assert v["int8_sqrt_vs_f64"] > 6
+    assert v["int_matmul_max"] < 0.25
 
 
 def test_standard_cpython_list_layout_is_pointer_plus_float(v):

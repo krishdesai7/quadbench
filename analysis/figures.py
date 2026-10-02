@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, cast
 import altair as alt
 import numpy as np
 import polars as pl
-from altair.vegalite.v6.schema.channels import Tooltip
+from altair.vegalite.v6.schema.channels import Tooltip, X
 
 from analysis.data import (
     ALLOC_COLD,
@@ -1096,9 +1096,7 @@ def gpu_two_ceilings(d: AnalysisData) -> Figure:
 # Lesson 5 · precision
 # ---------------------------------------------------------------------------
 
-F16_ORDER: list[str] = ["float16", "float32", "float64", "quad-sleef", "longdouble64"]
-# quad-sleef's measurement is null past ~1.3M elements (the harness's time cap), so
-# it can't be labeled at the global max n_elem like the others.
+F16_ORDER: list[str] = ["float16", "float32", "float64", "quad-sleef"]
 F16_LABELS: Final[dict[str, str]] = {
     "float16": "np.float16",
     "float32": "np.float32",
@@ -1113,12 +1111,12 @@ def float16_curve(d: AnalysisData) -> Figure:
         .filter(OUT_HOT & ADD & pl.col.implementation.is_in(other=F16_ORDER))
         .select("implementation", "n_elem", "ns_elem", "us")
     )
-    # Label each line at its own largest *measured* size, not the dataset's
-    # global max: quad-sleef has rows past ~1.3M elements, but ns_elem is null
-    # there (time-capped out), so filtering on the global max silently drops it.
+    # Label each line at its own largest *measured* size, not the dataset's global max
     ends: pl.DataFrame = (
         rows.filter(pl.col.ns_elem.is_not_null())
-        .filter(pl.col.n_elem == pl.col.n_elem.max().over("implementation"))
+        .filter(
+            pl.col.n_elem == pl.col.n_elem.max().over(partition_by="implementation")
+        )
         .with_columns(
             pl.col.implementation.replace_strict(old=F16_LABELS).alias(name="label")
         )
@@ -1148,7 +1146,7 @@ def float16_curve(d: AnalysisData) -> Figure:
         legend=None,
         scale=alt.Scale(
             domain=F16_ORDER,
-            range=[P["series"][1], P["series"][0], P["shade"], P["ink2"], P["ink"]],  # ty: ignore[invalid-argument-type]
+            range=[P["series"][1], P["series"][0], P["shade"], P["ink2"]],  # ty: ignore[invalid-argument-type]
         ),
     )
     lines: alt.Chart = (
@@ -1182,188 +1180,349 @@ def float16_curve(d: AnalysisData) -> Figure:
         on="implementation", index="n_elem", values="ns_elem"
     ).sort(by="n_elem")
     return Figure(
-        chart, table, label="Table view · float16 against float32 and float64"
+        chart, table, label="Table view · float16 against float32, float64, quad-sleef"
     )
 
 
 def float16_mechanism(d: AnalysisData) -> Figure:
     """Native float16 ufuncs against widening to float32 by hand."""
-    paths = ["native ufunc", "widened by hand"]
-    mech = (
+    paths: list[str] = ["native ufunc", "widened by hand"]
+    mech: pl.DataFrame = (
         d.runs["cpu_f16"]
         .filter(
-            (pl.col("destination") == "alloc")
-            & (pl.col("cache_state") == "hot")
-            & (pl.col("n_elem") == 256_000)
+            (pl.col.destination == "alloc")
+            & (pl.col.cache_state == "hot")
+            & (pl.col.n_elem == 256_000)
         )
         .with_columns(
-            pl.col("operation").str.replace("_via_f32", "").alias("op"),
-            pl.when(pl.col("operation").str.contains("via_f32"))
-            .then(pl.lit(paths[1]))
-            .otherwise(pl.lit(paths[0]))
-            .alias("path"),
+            pl.col.operation.str.replace(pattern="_via_f32", value="").alias(name="op"),
+            pl.when(pl.col.operation.str.contains(pattern="via_f32"))
+            .then(statement=pl.lit(value=paths[1]))
+            .otherwise(statement=pl.lit(value=paths[0]))
+            .alias(name="path"),
         )
         .select("op", "implementation", "path", "ns_elem")
     )
-    span = mech.pivot("path", index=["op", "implementation"], values="ns_elem").rename(
-        {paths[0]: "native", paths[1]: "via"}
-    )
+    span: pl.DataFrame = mech.pivot(
+        on="path", index=["op", "implementation"], values="ns_elem"
+    ).rename(mapping={paths[0]: "native", paths[1]: "via"})
     # One dataset for both layers: a faceted layer cannot mix sources.
-    mech = mech.join(span, on=["op", "implementation"])
+    mech: pl.DataFrame = mech.join(other=span, on=["op", "implementation"])
     scale = alt.Scale(type="log", domain=[0.1, 12], nice=False)
-    axis = alt.Axis(values=[0.1, 0.3, 1, 3, 10], format="~g")
-    y = alt.Y("op:N", title=None, sort=["add", "mul", "exp"])
+    axis = alt.Axis(
+        values=[0.1, 0.3, 1, 3, 10], format="~g", labelFontSize=13, titleFontSize=16
+    )
+    y = alt.Y(shorthand="op:N", title=None, sort=["add", "mul", "exp"])
     # A dumbbell, not bars: the values span 40×, so the axis is log.
-    rule = (
+    rule: alt.Chart = (
         alt.Chart()
         .mark_rule(color=P["context"], strokeWidth=2.5)  # ty: ignore[invalid-argument-type]
         .encode(
             x=alt.X(
-                "native:Q", scale=scale, title="ns per element (log scale)", axis=axis
+                shorthand="native:Q",
+                scale=scale,
+                title="ns per element (log scale)",
+                axis=axis,
             ),
             x2="via:Q",
             y=y,
         )
     )
-    dots = (
+    dots: alt.Chart = (
         alt.Chart()
         .mark_point(size=100)
         .encode(
             x=alt.X(
-                "ns_elem:Q", scale=scale, title="ns per element (log scale)", axis=axis
+                shorthand="ns_elem:Q",
+                scale=scale,
+                title="ns per element (log scale)",
+                axis=axis,
             ),
             y=y,
             color=alt.Color(
-                "path:N",
+                shorthand="path:N",
                 sort=paths,
                 scale=alt.Scale(domain=paths, range=P["series"][:2]),
-                legend=alt.Legend(title=None),
+                legend=alt.Legend(title=None, labelFontSize=13, titleFontSize=16),
             ),
             tooltip=[
-                alt.Tooltip("op:N"),
-                alt.Tooltip("implementation:N", title="dtype"),
-                alt.Tooltip("path:N"),
-                alt.Tooltip("ns_elem:Q", title="ns / element", format=".3f"),
+                alt.Tooltip(shorthand="op:N"),
+                alt.Tooltip(shorthand="implementation:N", title="dtype"),
+                alt.Tooltip(shorthand="path:N"),
+                alt.Tooltip(shorthand="ns_elem:Q", title="ns / element", format=".3f"),
             ],
         )
     )
-    chart = (
+    chart: alt.LayerChart | alt.FacetChart = (
         alt.layer(rule, dots)
         .properties(width=235, height=150)
         .facet(
-            column=alt.Column("implementation:N", title=None, sort=F16_ORDER), data=mech
+            column=alt.Column(
+                shorthand="implementation:N",
+                title=None,
+                sort=F16_ORDER,
+                header=alt.Header(labelFont="monospace"),
+            ),
+            data=mech,
         )
         .properties(
             title=alt.Title(
-                "Converting to float32 by hand costs the same as NumPy's float16: the conversion is the cost",
+                text="Converting to float32 by hand costs the same as NumPy's float16: the conversion is the cost",
                 subtitle="256,000 elements · 'widened by hand' = astype(float32), operate, astype back",
             )
         )
     )
     return Figure(
         chart,
-        span.sort("implementation", "op"),
-        "Table view · native against hand-widened",
+        table=span.sort("implementation", "op"),
+        label="Table view · native against hand-widened",
     )
 
 
-DTYPE_NAMED = [
-    "quad (software, 128-bit)",
-    "longdouble (x87, 80-bit)",
-    "float16 (converted, no ALU)",
+DTYPE_NAMED: Final[list[str]] = [
+    "np.float128 (software, 128-bit)",
+    "np.float96 (x87, 80-bit)",
+    "np.float32 (hardware)",
+    "np.float16 (converted, no ALU)",
+]
+FLOATS: Final[list[str]] = [
+    "float16",
+    "float32",
+    "float64",
+    "longdouble64",
+    "quad-sleef",
+]
+INT_BITS: Final[list[int]] = [8, 16, 32, 64]
+# Integer ops in three groups: arithmetic NumPy does in the integer type, ops
+# it converts to a float first, and the 2×2 matrix products.
+INT_OP_ORDER: Final[list[str]] = [
+    "add",
+    "mul",
+    "muladd",
+    "muladd_accum",
+    "div",
+    "sqrt",
+    "exp",
+    "cos",
+    "matmul_explicit",
+    "matmul",
 ]
 
 
-def dtype_grid(d: AnalysisData) -> Figure:
-    """Every op's cost for every dtype, relative to float64."""
-    family = (
-        pl.when(pl.col("implementation") == "quad-sleef")
-        .then(pl.lit(DTYPE_NAMED[0]))
-        .when(pl.col("implementation") == "longdouble64")
-        .then(pl.lit(DTYPE_NAMED[1]))
-        .when(pl.col("implementation") == "float16")
-        .then(pl.lit(DTYPE_NAMED[2]))
-        .otherwise(pl.lit("the 10 hardware dtypes"))
+def vs_float64(d: AnalysisData) -> pl.DataFrame:
+    """Every dtype's cost per element at 256,000 elements, relative to float64."""
+    sweep: pl.DataFrame = d.runs["cpu_sweep"].filter(OUT_HOT & (pl.col.n == 64_000))
+    f64: pl.DataFrame = sweep.filter(pl.col.implementation == "float64").select(
+        "operation", pl.col.ns_elem.alias(name="base")
     )
-    sweep = d.runs["cpu_sweep"].filter(OUT_HOT & (pl.col("n") == 64_000))
-    f64 = sweep.filter(pl.col("implementation") == "float64").select(
-        "operation", pl.col("ns_elem").alias("base")
+    return (
+        sweep.join(other=f64, on="operation")
+        .with_columns((pl.col.ns_elem / pl.col.base).alias(name="vs_f64"))
+        .drop_nulls(subset="vs_f64")
+        .select("operation", "implementation", "result_dtype", "vs_f64", "ns_elem")
     )
-    tax = (
-        sweep.join(f64, on="operation")
-        .with_columns(
-            (pl.col("ns_elem") / pl.col("base")).alias("vs_f64"), family.alias("family")
-        )
-        .drop_nulls("vs_f64")
-        .select("operation", "implementation", "family", "vs_f64", "ns_elem")
-    )
-    context, named = (
-        tax.filter(~pl.col("family").is_in(DTYPE_NAMED)),
-        tax.filter(pl.col("family").is_in(DTYPE_NAMED)),
-    )
-    x = alt.X(
-        "vs_f64:Q",
-        scale=alt.Scale(type="log", nice=False),
+
+
+def _vs_f64_x(values: list[float], domain: list[float]) -> alt.X:
+    """The shared log x-axis of the dtype grids, with 1× named and emphasized."""
+    unit = "datum.value == 1"
+    return alt.X(
+        shorthand="vs_f64:Q",
+        scale=alt.Scale(type="log", domain=domain, nice=False),
         title="cost relative to float64, same operation (log scale)",
         axis=alt.Axis(
-            values=[0.25, 1, 4, 16, 64, 256],
-            labelExpr="format(datum.value, '.3~g') + '×'",
+            values=values,
+            labelExpr=f"format(datum.value, '.3~g') + '×' + ({unit} ? ' = float64' : '')",
+            labelFontWeight=alt.condition(
+                predicate=unit,
+                if_true=alt.value(value=700),
+                if_false=alt.value(value=400),
+            ),
+            labelColor=alt.condition(
+                predicate=unit,
+                if_true=alt.value(value=P["ink"]),
+                if_false=alt.value(value=P["ink2"]),
+            ),
+            labelFontSize=13,
+            titleFontSize=16,
         ),
     )
-    y = alt.Y("operation:N", sort=OP_ORDER, title=None)
-    unity = alt.Chart(pl.DataFrame({"x": [1.0]})).mark_rule(color=P["ink2"]).encode(x=x)  # ty: ignore[invalid-argument-type]
-    grey = (
-        alt.Chart(context)
-        .mark_point(size=60, color=P["context"], opacity=0.85)  # ty: ignore[invalid-argument-type]
-        .encode(
-            x=x,
-            y=y,
-            tooltip=[
-                alt.Tooltip("implementation:N", title="dtype"),
-                alt.Tooltip("vs_f64:Q", title="× float64", format=".2f"),
-            ],
-        )
+
+
+def _float64_rule() -> alt.Chart:
+    """float64 itself: the reference every dot in a dtype grid is measured against."""
+    return (
+        alt.Chart()
+        .mark_rule(color=P["ink"], strokeWidth=1.5)  # ty: ignore[invalid-argument-type]
+        .encode(x=alt.datum(1.0))
     )
-    dots = (
-        alt.Chart(named)
+
+
+def dtype_grid(d: AnalysisData) -> Figure:
+    """Every op's cost for every float dtype, relative to float64."""
+    family: pl.Expr = pl.col.implementation.replace_strict(
+        old={
+            "quad-sleef": DTYPE_NAMED[0],
+            "longdouble64": DTYPE_NAMED[1],
+            "float32": DTYPE_NAMED[2],
+            "float16": DTYPE_NAMED[3],
+        }
+    )
+    tax: pl.DataFrame = (
+        vs_float64(d)
+        .filter(
+            pl.col.implementation.is_in(other=FLOATS)
+            & (pl.col.implementation != "float64")
+        )
+        .with_columns(family.alias(name="family"))
+    )
+    x: X = _vs_f64_x(values=[0.25, 1, 4, 16, 64, 256], domain=[0.1, 150])
+    y = alt.Y(
+        shorthand="operation:N",
+        sort=OP_ORDER,
+        title=None,
+        axis=alt.Axis(labelFont="monospace"),
+    )
+    dots: alt.Chart = (
+        alt.Chart(data=tax)
         .mark_point(size=140)
         .encode(
             x=x,
             y=y,
             color=alt.Color(
-                "family:N",
+                shorthand="family:N",
                 sort=DTYPE_NAMED,
-                scale=alt.Scale(domain=DTYPE_NAMED, range=P["series"]),
-                legend=alt.Legend(title=None, columns=1),
+                scale=alt.Scale(
+                    domain=DTYPE_NAMED,
+                    # float16 keeps the aqua it has in Lesson 5's other charts.
+                    range=[P["series"][0], P["series"][1], P["violet"], P["series"][2]],  # ty: ignore[invalid-argument-type]
+                ),
+                legend=alt.Legend(
+                    title=None, columns=1, labelFontSize=13, titleFontSize=16
+                ),
             ),
             tooltip=[
-                alt.Tooltip("implementation:N", title="dtype"),
-                alt.Tooltip("vs_f64:Q", title="× float64", format=".1f"),
-                alt.Tooltip("ns_elem:Q", title="ns / element", format=".2f"),
+                alt.Tooltip(shorthand="implementation:N", title="dtype"),
+                alt.Tooltip(shorthand="vs_f64:Q", title="× float64", format=".1f"),
+                alt.Tooltip(shorthand="ns_elem:Q", title="ns / element", format=".2f"),
             ],
         )
     )
-    quad_labels = (
-        alt.Chart(named.filter(pl.col("implementation") == "quad-sleef"))
+    quad_labels: alt.Chart = (
+        alt.Chart(data=tax.filter(pl.col.implementation == "quad-sleef"))
         .mark_text(dy=-13, fontSize=11.5, color=P["ink2"])  # ty: ignore[invalid-argument-type]
-        .encode(x=x, y=y, text=alt.Text("vs_f64:Q", format=".0f"))
+        .encode(x=x, y=y, text=alt.Text(shorthand="vs_f64:Q", format=".0f"))
     )
-    chart = (
-        (unity + grey + dots + quad_labels)
+    chart: alt.LayerChart | alt.FacetChart = (
+        (_float64_rule() + dots + quad_labels)
         .properties(
             width=540,
             height=320,
             title=alt.Title(
-                "Ten hardware dtypes cluster near float64; three outliers don't",
-                subtitle="NumPy · 256,000 elements · 1× = float64 · grey = the ten hardware dtypes · numbers = quad's multiple",
+                text="float32 stays near float64; the three floats this CPU can't compute directly don't",
+                subtitle="NumPy · 256,000 elements",
             ),
         )
         .configure_view(clip=False)
     )
     return Figure(
         chart,
-        named.sort("operation", "implementation"),
-        "Table view · dtypes outside the cluster",
+        table=tax.sort("operation", "implementation").drop("result_dtype"),
+        label="Table view · every float dtype against float64",
+    )
+
+
+def int_grid(d: AnalysisData) -> Figure:
+    """Every op's cost for every signed integer dtype, relative to float64."""
+    ints: pl.DataFrame = (
+        vs_float64(d)
+        .filter(pl.col.implementation.str.contains("int"))
+        .with_columns(
+            pl.col.implementation.str.extract(r"(\d+)").cast(pl.Int64).alias("bits"),
+            pl.col.implementation.str.starts_with("u").alias("unsigned"),
+        )
+        .with_columns(pl.format("int{}", "bits").alias("width"))
+    )
+    signed: pl.DataFrame = ints.filter(~pl.col.unsigned)
+    # Unsigned types track their signed twins except on div, so only signed are drawn.
+    twins: pl.DataFrame = signed.join(
+        other=ints.filter(pl.col.unsigned), on=["operation", "bits"], suffix="_u"
+    ).filter(pl.col.operation != "div")
+    twin_gap: float = cast(
+        typ=float,
+        val=((pl.col.vs_f64_u / pl.col.vs_f64) - 1)
+        .abs()
+        .max()
+        .pipe(twins.select)
+        .item(),
+    )
+    # What NumPy computes each op in, by width: the integer type itself, or a float.
+    computed_in: pl.DataFrame = (
+        signed.sort("bits")
+        .group_by("operation", maintain_order=True)
+        .agg(
+            pl.when(pl.col.result_dtype == pl.col.implementation)
+            .then(pl.lit("the integer type"))
+            .otherwise("result_dtype")
+            .unique(maintain_order=True)
+            .str.join(" / ")
+            .alias("t")
+        )
+        .with_columns(pl.format("in {}", "t").alias("t"))
+    )
+    widths: list[str] = [f"int{b}" for b in INT_BITS]
+    ramp: list[str] = [P["ramp"][1], P["ramp"][3], P["ramp"][5], P["ramp"][6]]
+    x = _vs_f64_x(values=[0.125, 0.25, 0.5, 1, 2, 4, 8], domain=[1 / 16, 10])
+    y = alt.Y(
+        shorthand="operation:N",
+        sort=INT_OP_ORDER,
+        title=None,
+        axis=alt.Axis(labelFont="monospace"),
+    )
+    dots: alt.Chart = (
+        alt.Chart(data=signed)
+        .mark_point(size=110, filled=True, opacity=1)
+        .encode(
+            x=x,
+            y=y,
+            color=alt.Color(
+                shorthand="width:N",
+                sort=widths,
+                scale=alt.Scale(domain=widths, range=ramp),
+                legend=alt.Legend(title=None, orient="top", labelFontSize=13),
+            ),
+            tooltip=[
+                alt.Tooltip(shorthand="implementation:N", title="dtype"),
+                alt.Tooltip(shorthand="result_dtype:N", title="computed in"),
+                alt.Tooltip(shorthand="vs_f64:Q", title="× float64", format=".2f"),
+                alt.Tooltip(shorthand="ns_elem:Q", title="ns / element", format=".2f"),
+            ],
+        )
+    )
+    notes: alt.Chart = (
+        alt.Chart(data=computed_in)
+        .mark_text(align="left", fontSize=12.5, color=P["ink2"])  # ty: ignore[invalid-argument-type]
+        .encode(x=alt.value(552), y=y, text=alt.Text(shorthand="t:N"))
+    )
+    chart: alt.LayerChart | alt.FacetChart = (
+        (_float64_rule() + dots + notes)
+        .properties(
+            width=540,
+            height=320,
+            title=alt.Title(
+                text="Integers cost what their bytes cost, until NumPy converts them to a float",
+                subtitle=f"NumPy · 256,000 elements · signed types (unsigned are within {twin_gap:.0%},"
+                " except on div) · right: the type NumPy computes in",
+            ),
+        )
+        .configure_view(clip=False)
+    )
+    return Figure(
+        chart,
+        table=ints.sort("operation", "bits", "unsigned").select(
+            "operation", "implementation", "result_dtype", "vs_f64", "ns_elem"
+        ),
+        label="Table view · every integer dtype against float64",
     )
 
 

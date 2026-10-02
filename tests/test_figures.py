@@ -53,6 +53,7 @@ FIGURES = [
     "float16_curve",
     "float16_mechanism",
     "dtype_grid",
+    "int_grid",
     "gpu_precision_ratios",
     "destination_decomposition",
     "allocation_cliff",
@@ -76,18 +77,22 @@ def test_ladder_orders_every_representation_slowest_first(d):
     assert table["representation"].to_list()[:3] == [
         "list[np.float32]",
         "list[float]",
-        "NDArray[object]",
+        "NDArray[float]",
     ]
-    assert table["representation"].to_list()[-1] == "CuPy float32 (A100)"
+    assert table["representation"].to_list()[-1] == "NDArray[cp.float32] (A100)"
     assert table["ns per element"].is_sorted(descending=True)
 
 
 def test_ladder_rows_borrowed_from_other_sizes_are_size_insensitive(d):
-    quad = d.runs["cpu_dense"].filter(
-        data.ALLOC_COLD
-        & (pl.col("operation") == "add")
-        & (pl.col("implementation") == "quad-sleef")
-    )["ns_elem"].drop_nulls()
+    quad = (
+        d.runs["cpu_dense"]
+        .filter(
+            data.ALLOC_COLD
+            & (pl.col("operation") == "add")
+            & (pl.col("implementation") == "quad-sleef")
+        )["ns_elem"]
+        .drop_nulls()
+    )
     assert quad.max() / quad.min() < 1.06
     longdouble = d.runs["cpu_sweep"].filter(
         data.ALLOC_COLD
