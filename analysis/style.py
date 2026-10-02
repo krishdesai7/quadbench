@@ -192,8 +192,8 @@ def memory_layout() -> HTML:
             "<defs><marker id='arrow' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' "
             f"orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='{ink2}'/></marker></defs>"
         ),
-        f"<text x='20' y='36' font-size='15' font-weight='600' fill='{ink}'>list[float]</text>",
-        f"<text x='20' y='56' font-size='12' fill='{ink2}'>a row of 8-byte pointers…</text>",
+        f"<text x='20' y='36' font-size='15' font-weight='600' fill='{ink}'><tspan font-family='monospace'>list[float]</tspan></text>",
+        f"<text x='20' y='56' font-size='12' fill='{ink2}'>a row of 8-byte pointers</text>",
     ]
     for i, (hx, hy) in enumerate(iterable=heap):
         x: int = x0 + i * cell
@@ -208,18 +208,18 @@ def memory_layout() -> HTML:
             "fill='none' marker-end='url(#arrow)'/>"
         )
         parts.append(
-            f"<rect x='{hx}' y='{hy}' width='90' height='30' rx='4' fill='{orange}' fill-opacity='0.14' stroke='{orange}' stroke-width='1.5'/>"
+            f"<rect x='{hx}' y='{hy}' width='120' height='30' rx='4' fill='{orange}' fill-opacity='0.14' stroke='{orange}' stroke-width='1.5'/>"
         )
         parts.append(
-            f"<text x='{hx + 8}' y='{hy + 19}' font-size='11' fill='{ink2}'>ref·type·<tspan font-weight='600' fill='{ink}'>{values[i]}</tspan></text>"
+            f"<text x='{hx + 8}' y='{hy + 19}' font-size='11' fill='{ink2}'><tspan font-family='monospace'>ref · type · </tspan><tspan font-weight='600' fill='{ink}'>{values[i]}</tspan></text>"
         )
     parts += [
-        f"<text x='20' y='176' font-size='12' fill='{ink2}'>…to float objects</text>",
-        f"<text x='20' y='193' font-size='12' fill='{ink2}'>scattered on the heap,</text>",
-        f"<text x='20' y='210' font-size='12' fill='{ink2}'>each with its own</text>",
-        f"<text x='20' y='227' font-size='12' fill='{ink2}'>header</text>",
+        f"<text x='20' y='76' font-size='12' fill='{ink2}'>to float objects</text>",
+        f"<text x='20' y='93' font-size='12' fill='{ink2}'>scattered on the heap,</text>",
+        f"<text x='20' y='110' font-size='12' fill='{ink2}'>each with its own</text>",
+        f"<text x='20' y='127' font-size='12' fill='{ink2}'>header</text>",
         f"<line x1='20' y1='282' x2='740' y2='282' stroke='{grid}'/>",
-        f"<text x='20' y='326' font-size='15' font-weight='600' fill='{ink}'>NDArray[np.float64]</text>",
+        f"<text x='20' y='326' font-size='15' font-weight='600' fill='{ink}'><tspan font-family='monospace'>NDArray[np.float64]</tspan></text>",
         f"<text x='20' y='346' font-size='12' fill='{ink2}'>one contiguous block of raw numbers</text>",
     ]
     for i, value in enumerate(iterable=values):
