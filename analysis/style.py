@@ -158,10 +158,28 @@ def _table_view(frame: pl.DataFrame, label: str) -> HTML:
     )
 
 
+def _has_bars(spec: object) -> bool:
+    """Whether a Vega-Lite spec (or any of its layers) draws bar marks."""
+    if isinstance(spec, dict):
+        mark = spec.get("mark")
+        if mark == "bar" or (isinstance(mark, dict) and mark.get("type") == "bar"):
+            return True
+        return any(_has_bars(v) for v in spec.values())
+    if isinstance(spec, list):
+        return any(_has_bars(v) for v in spec)
+    return False
+
+
 def show(*figures: Figure) -> None:
-    """Display each chart followed by its collapsed table view."""
+    """Display each chart followed by its collapsed table view.
+
+    Charts get zoom and pan, except bar charts: panning cuts bars off from
+    their zero baseline, and the clipping that scale binding turns on makes
+    Vega's canvas renderer skip bars with rounded ends entirely.
+    """
     for figure in figures:
-        display(figure.chart.interactive())  # ty: ignore[unresolved-attribute]
+        chart = figure.chart
+        display(chart if _has_bars(chart.to_dict()) else chart.interactive())  # ty: ignore[unresolved-attribute]
         if figure.table is not None:
             display(_table_view(figure.table, figure.label))
 
