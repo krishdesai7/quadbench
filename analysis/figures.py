@@ -1512,7 +1512,7 @@ def int_grid(d: AnalysisData) -> Figure:
     )
 
 
-GPU_PAIRS: list[str] = ["cp.float64 / cp.float32", "cp.float32 / cp.float16"]
+GPU_PAIRS: list[str] = ["cp.float64/cp.float32", "cp.float32/cp.float16"]
 
 
 def gpu_precision_table(d: AnalysisData) -> pl.DataFrame:
@@ -1561,7 +1561,7 @@ def gpu_precision_ratios(d: AnalysisData) -> Figure:
                 shorthand="pair:N",
                 sort=GPU_PAIRS,
                 scale=alt.Scale(domain=GPU_PAIRS, range=P["series"][:2]),
-                legend=alt.Legend(title=None, labelFontSize=16),
+                legend=alt.Legend(title=None, labelFont="monospace"),
             ),
             tooltip=[
                 alt.Tooltip(shorthand="operation:N", title="op"),
@@ -1683,7 +1683,7 @@ def destination_decomposition(d: AnalysisData) -> Figure:
     )
 
 
-SIDES: list[str] = ["at or below 32 MiB", "above 32 MiB"]
+SIDES: list[str] = ["at or below 32 MB", "above 32 MB"]
 MMAP_THRESHOLD_MIB = 32
 
 
@@ -1694,7 +1694,9 @@ def allocation_cliff_rows(d: AnalysisData) -> pl.DataFrame:
             allocation_penalty(d.runs, run="cpu_dense"),
             allocation_penalty(d.runs, run="cpu_alloc"),
             allocation_penalty(
-                d.runs, "cpu_dram50", operations=("add", "mul", "div", "sqrt", "exp")
+                d.runs,
+                run="cpu_dram50",
+                operations=("add", "mul", "div", "sqrt", "exp"),
             ),
         ]
     ).with_columns(
@@ -1709,7 +1711,9 @@ def allocation_cliff(d: AnalysisData) -> Figure:
     """Allocation penalty against result-buffer size, across three runs."""
     cliff: DataFrame = allocation_cliff_rows(d)
     zero: Chart = (
-        alt.Chart(pl.DataFrame({"y": [0.0]})).mark_rule(color=P["grid"]).encode(y="y:Q")  # ty: ignore[invalid-argument-type]
+        alt.Chart(data=pl.DataFrame(data={"y": [0.0]}))
+        .mark_rule(color=P["grid"])  # ty: ignore[invalid-argument-type]
+        .encode(y="y:Q")
     )
     dots: Chart = (
         alt.Chart(data=cliff)
@@ -1718,7 +1722,7 @@ def allocation_cliff(d: AnalysisData) -> Figure:
             x=alt.X(
                 shorthand="result_mib:Q",
                 scale=alt.Scale(type="log"),
-                title="result buffer size, MiB (log scale)",
+                title="result buffer size, MB (log scale)",
                 axis=alt.Axis(
                     values=[0.05, 0.5, 5, 32, 61],
                     format="~g",
@@ -1750,7 +1754,7 @@ def allocation_cliff(d: AnalysisData) -> Figure:
         x=float(MMAP_THRESHOLD_MIB), dash=[4, 3]
     ) + _note(
         x=float(MMAP_THRESHOLD_MIB),
-        text="glibc mmap threshold, 32 MiB",
+        text="glibc mmap threshold, 32 MB",
         y_px=12,
         align="right",
         dx=-7,
@@ -1759,7 +1763,7 @@ def allocation_cliff(d: AnalysisData) -> Figure:
         width=520,
         height=300,
         title=alt.Title(
-            text="Allocating a result is free up to 32 MiB, then suddenly is not",
+            text="Allocating a result is free up to 32 MB, then suddenly is not",
             subtitle="NumPy · cold operands · three runs pooled · above the threshold every call maps and unmaps fresh memory",
         ),
     )
@@ -1774,101 +1778,123 @@ def allocation_cliff(d: AnalysisData) -> Figure:
 # Lesson 7 · compilation
 # ---------------------------------------------------------------------------
 
-FRAMEWORK_SERIES = ["JAX JIT · host pipeline", "CuPy alloc · CUDA events"]
-COMMON_GPU_OPS = ["add", "exp", "matmul"]
+FRAMEWORK_SERIES: Final[list[str]] = [
+    "JAX JIT · host pipeline",
+    "CuPy alloc · CUDA events",
+]
+COMMON_GPU_OPS: Final[list[str]] = ["add", "exp", "matmul"]
 
 
 def framework_endpoint(d: AnalysisData) -> pl.DataFrame:
     """CuPy and JAX fp32 per-element cost at the largest matched size."""
-    rows = framework_rows(d)
+    rows: DataFrame = framework_rows(d)
     return (
-        rows.filter(pl.col("n_elem") == rows["n_elem"].max())
-        .pivot("series", index="operation", values="ns_elem")
+        rows.filter(pl.col.n_elem == rows["n_elem"].max())
+        .pivot(on="series", index="operation", values="ns_elem")
         .with_columns(
-            (pl.col(FRAMEWORK_SERIES[1]) / pl.col(FRAMEWORK_SERIES[0])).alias(
-                "CuPy / JAX time"
+            (pl.col(name=FRAMEWORK_SERIES[1]) / pl.col(name=FRAMEWORK_SERIES[0])).alias(
+                name="CuPy / JAX time"
             )
         )
         .sort(
-            pl.col("operation").replace_strict(
-                {op: i for i, op in enumerate(COMMON_GPU_OPS)}
+            by=pl.col.operation.replace_strict(
+                old={op: i for i, op in enumerate(iterable=COMMON_GPU_OPS)}
             )
         )
     )
 
 
 def framework_rows(d: AnalysisData) -> pl.DataFrame:
-    jax = (
+    jax: DataFrame = (
         d.runs["jax_dense"]
         .filter(
-            (pl.col("destination") == "jit")
-            & (pl.col("cache_state") == "cold")
-            & (pl.col("implementation") == "JAX fp32")
-            & pl.col("operation").is_in(COMMON_GPU_OPS)
+            (pl.col.destination == "jit")
+            & (pl.col.cache_state == "cold")
+            & (pl.col.implementation == "JAX fp32")
+            & pl.col.operation.is_in(other=COMMON_GPU_OPS)
         )
         .select("operation", "n_elem", "us", "ns_elem", "samples")
-        .with_columns(pl.lit(FRAMEWORK_SERIES[0]).alias("series"))
+        .with_columns(pl.lit(value=FRAMEWORK_SERIES[0]).alias(name="series"))
     )
-    cupy = (
+    cupy: DataFrame = (
         d.runs["gpu_dense80"]
         .filter(
             ALLOC_COLD
-            & (pl.col("implementation") == "GPU fp32")
-            & pl.col("operation").is_in(COMMON_GPU_OPS)
+            & (pl.col.implementation == "GPU fp32")
+            & pl.col.operation.is_in(other=COMMON_GPU_OPS)
         )
         .select("operation", "n_elem", "us", "ns_elem", "samples")
-        .with_columns(pl.lit(FRAMEWORK_SERIES[1]).alias("series"))
+        .with_columns(pl.lit(value=FRAMEWORK_SERIES[1]).alias(name="series"))
     )
-    return pl.concat([jax, cupy])
+    return pl.concat(items=[jax, cupy])
 
 
 def jax_vs_cupy(d: AnalysisData) -> Figure:
     """Matched JAX and CuPy fp32 execution cost across size."""
-    rows = framework_rows(d)
-    chart = (
-        alt.Chart(rows)
+    rows: DataFrame = framework_rows(d)
+    chart: FacetChart = (
+        alt.Chart(data=rows)
         .mark_line(point=True, strokeWidth=2.1)
         .encode(
             x=alt.X(
-                "n_elem:Q",
+                shorthand="n_elem:Q",
                 scale=alt.Scale(type="log", nice=False),
                 title="elements (log scale)",
-                axis=alt.Axis(format="~s", values=[1_000, 100_000, 10_000_000]),
+                axis=alt.Axis(
+                    format="~s",
+                    values=[1_000, 100_000, 10_000_000],
+                    labelFontSize=16,
+                    titleFontSize=16,
+                ),
             ),
             y=alt.Y(
-                "ns_elem:Q",
+                shorthand="ns_elem:Q",
                 scale=alt.Scale(type="log"),
                 title="ns per element (log scale)",
-                axis=alt.Axis(values=[0.001, 0.01, 0.1, 1, 10, 100], format="~g"),
+                axis=alt.Axis(
+                    values=[0.001, 0.01, 0.1, 1, 10, 100],
+                    format="~g",
+                    labelFontSize=16,
+                    titleFontSize=16,
+                ),
             ),
             color=alt.Color(
-                "series:N",
+                shorthand="series:N",
                 sort=FRAMEWORK_SERIES,
                 scale=alt.Scale(domain=FRAMEWORK_SERIES, range=P["series"][:2]),
-                legend=alt.Legend(title=None),
+                legend=alt.Legend(title=None, labelFontSize=16, titleFontSize=16),
             ),
             tooltip=[
-                alt.Tooltip("operation:N"),
-                alt.Tooltip("series:N", title="framework and timer"),
-                alt.Tooltip("n_elem:Q", title="elements", format=","),
-                alt.Tooltip("us:Q", title="µs / call", format=".2f"),
-                alt.Tooltip("ns_elem:Q", title="ns / element", format=".4f"),
+                alt.Tooltip(shorthand="operation:N"),
+                alt.Tooltip(shorthand="series:N", title="framework and timer"),
+                alt.Tooltip(shorthand="n_elem:Q", title="elements", format=","),
+                alt.Tooltip(shorthand="us:Q", title="µs / call", format=".2f"),
+                alt.Tooltip(shorthand="ns_elem:Q", title="ns / element", format=".4f"),
             ],
         )
         .properties(width=215, height=230)
-        .facet(column=alt.Column("operation:N", sort=COMMON_GPU_OPS, title=None))
+        .facet(
+            column=alt.Column(
+                shorthand="operation:N",
+                sort=COMMON_GPU_OPS,
+                title=None,
+                header=alt.Header(labelFont="monospace"),
+            )
+        )
         .properties(
             title=alt.Title(
-                "JAX pays more per call, then matches or beats CuPy once arrays are large",
+                text="JAX pays more per call, then matches or beats CuPy once arrays are large",
                 subtitle="fp32 on an A100-80GB · cold operands · result allocated every call",
             )
         )
     )
-    return Figure(chart, framework_endpoint(d), "Table view · largest matched size")
+    return Figure(
+        chart, table=framework_endpoint(d), label="Table view · largest matched size"
+    )
 
 
-FUSION_OPS = ["add", "muladd", "chain", "matmul_explicit"]
-JAX_DTYPES = ["JAX fp16", "JAX bf16", "JAX fp32", "JAX fp64"]
+FUSION_OPS: Final[list[str]] = ["add", "muladd", "chain", "matmul_explicit"]
+JAX_DTYPES: Final[list[str]] = ["JAX fp16", "JAX bf16", "JAX fp32", "JAX fp64"]
 
 
 def fusion_table(d: AnalysisData) -> pl.DataFrame:
@@ -1876,19 +1902,19 @@ def fusion_table(d: AnalysisData) -> pl.DataFrame:
     return (
         d.runs["jax_sweep"]
         .filter(
-            (pl.col("n") == 25_000_000)
-            & (pl.col("cache_state") == "hot")
-            & pl.col("operation").is_in(FUSION_OPS)
-            & pl.col("implementation").is_in(JAX_DTYPES)
+            (pl.col.n == 25_000_000)
+            & (pl.col.cache_state == "hot")
+            & pl.col.operation.is_in(other=FUSION_OPS)
+            & pl.col.implementation.is_in(other=JAX_DTYPES)
         )
-        .pivot("destination", index=["operation", "implementation"], values="us")
-        .with_columns((pl.col("eager") / pl.col("jit")).alias("JIT speedup"))
+        .pivot(on="destination", index=["operation", "implementation"], values="us")
+        .with_columns((pl.col.eager / pl.col.jit).alias(name="JIT speedup"))
         .sort(
-            pl.col("implementation").replace_strict(
-                {k: i for i, k in enumerate(JAX_DTYPES)}
+            pl.col.implementation.replace_strict(
+                old={k: i for i, k in enumerate(iterable=JAX_DTYPES)}
             ),
-            pl.col("operation").replace_strict(
-                {k: i for i, k in enumerate(FUSION_OPS)}
+            pl.col.operation.replace_strict(
+                old={k: i for i, k in enumerate(iterable=FUSION_OPS)}
             ),
         )
     )
@@ -1948,44 +1974,45 @@ def jit_fusion(d: AnalysisData) -> Figure:
             )
         )
     )
-    return Figure(chart, fusion, "Table view · JIT speedups")
+    return Figure(chart, table=fusion, label="Table view · JIT speedups")
 
 
-CPU_OPS = ["add", "exp", "chain", "matmul", "matmul_explicit"]
+CPU_OPS: Final[list[str]] = ["add", "exp", "chain", "matmul", "matmul_explicit"]
 
 
 def cpu_framework_table(d: AnalysisData) -> pl.DataFrame:
     """NumPy eager against JAX JIT on the same CPU node."""
-    n = max(d.meta["jax_cpu"]["sizes"])
+    n: int = max(d.meta["jax_cpu"]["sizes"])
     return (
         d.runs["jax_cpu"]
         .filter(
-            (pl.col("n") == n)
-            & (pl.col("cache_state") == "hot")
-            & pl.col("operation").is_in(CPU_OPS)
+            (pl.col.n == n)
+            & (pl.col.cache_state == "hot")
+            & pl.col.operation.is_in(other=CPU_OPS)
             & (
-                (
-                    (pl.col("implementation") == "JAX fp32")
-                    & (pl.col("destination") == "jit")
-                )
+                ((pl.col.implementation == "JAX fp32") & (pl.col.destination == "jit"))
                 | (
-                    (pl.col("implementation") == "NumPy fp32")
-                    & (pl.col("destination") == "eager")
+                    (pl.col.implementation == "NumPy fp32")
+                    & (pl.col.destination == "eager")
                 )
             )
         )
         .with_columns(
-            pl.when(pl.col("implementation") == "JAX fp32")
-            .then(pl.lit("JAX JIT"))
-            .otherwise(pl.lit("NumPy eager"))
-            .alias("runtime")
+            pl.when(pl.col.implementation == "JAX fp32")
+            .then(statement=pl.lit(value="JAX JIT"))
+            .otherwise(statement=pl.lit(value="NumPy eager"))
+            .alias(name="runtime")
         )
-        .pivot("runtime", index="operation", values="us")
+        .pivot(on="runtime", index="operation", values="us")
         .with_columns(
-            (pl.col("NumPy eager") / pl.col("JAX JIT")).alias("NumPy / JAX time")
+            (pl.col(name="NumPy eager") / pl.col(name="JAX JIT")).alias(
+                name="NumPy/JAX time"
+            )
         )
         .sort(
-            pl.col("operation").replace_strict({op: i for i, op in enumerate(CPU_OPS)})
+            by=pl.col.operation.replace_strict(
+                old={op: i for i, op in enumerate(iterable=CPU_OPS)}
+            )
         )
     )
 
@@ -2063,29 +2090,29 @@ def timer_rows(d: AnalysisData) -> pl.DataFrame:
             d.runs["gpu_host80"]
             .filter(
                 ALLOC_COLD
-                & (pl.col("implementation") == "GPU fp32")
-                & pl.col("operation").is_in(LATENCY_OPS)
+                & (pl.col.implementation == "GPU fp32")
+                & pl.col.operation.is_in(other=LATENCY_OPS)
             )
             .select("operation", "n_elem", "us", "ns_elem", "samples")
-            .with_columns(pl.lit(TIMER_SERIES[2]).alias("series")),
+            .with_columns(pl.lit(value=TIMER_SERIES[2]).alias(name="series")),
         ]
     )
 
 
 def timer_floor(d: AnalysisData) -> pl.DataFrame:
     """Smallest-size call times under each protocol."""
-    rows = timer_rows(d)
+    rows: DataFrame = timer_rows(d)
     return (
-        rows.filter(pl.col("n_elem") == rows["n_elem"].min())
-        .pivot("series", index="operation", values="us")
+        rows.filter(pl.col.n_elem == rows["n_elem"].min())
+        .pivot(on="series", index="operation", values="us")
         .with_columns(
-            (pl.col("JAX blocking") / pl.col("JAX pipelined")).alias(
-                "blocking / pipelined"
+            (pl.col.JAX_blocking / pl.col.JAX_pipelined).alias(
+                name="blocking / pipelined"
             )
         )
         .sort(
-            pl.col("operation").replace_strict(
-                {op: i for i, op in enumerate(LATENCY_OPS)}
+            by=pl.col.operation.replace_strict(
+                old={op: i for i, op in enumerate(iterable=LATENCY_OPS)}
             )
         )
     )
@@ -2093,48 +2120,65 @@ def timer_floor(d: AnalysisData) -> pl.DataFrame:
 
 def timing_protocol(d: AnalysisData) -> Figure:
     """Host-observed call time under three timing protocols."""
-    rows = timer_rows(d)
-    chart = (
-        alt.Chart(rows)
+    rows: DataFrame = timer_rows(d)
+    chart: FacetChart = (
+        alt.Chart(data=rows)
         .mark_line(point=True, strokeWidth=2)
         .encode(
             x=alt.X(
-                "n_elem:Q",
+                shorthand="n_elem:Q",
                 scale=alt.Scale(type="log", nice=False),
                 title="elements (log scale)",
                 axis=alt.Axis(
-                    format="~s", values=[1_000, 10_000, 100_000, 1_000_000, 10_000_000]
+                    format="~s",
+                    values=[1_000, 10_000, 100_000, 1_000_000, 10_000_000],
+                    labelFontSize=16,
+                    titleFontSize=16,
                 ),
             ),
             y=alt.Y(
-                "us:Q",
+                shorthand="us:Q",
                 scale=alt.Scale(type="log"),
                 title="µs per call, seen from Python (log scale)",
-                axis=alt.Axis(values=[1, 10, 100, 1_000], format="~g"),
+                axis=alt.Axis(
+                    values=[1, 10, 100, 1_000],
+                    format="~g",
+                    labelFontSize=16,
+                    titleFontSize=16,
+                ),
             ),
             color=alt.Color(
-                "series:N",
+                shorthand="series:N",
                 sort=TIMER_SERIES,
-                legend=alt.Legend(title=None),
+                legend=alt.Legend(title=None, labelFontSize=16, titleFontSize=16),
                 scale=alt.Scale(
                     domain=TIMER_SERIES,
                     range=[P["series"][0], P["shade"], P["series"][1]],  # ty: ignore[invalid-argument-type]
                 ),
             ),
             tooltip=[
-                alt.Tooltip("operation:N"),
-                alt.Tooltip("series:N", title="protocol"),
-                alt.Tooltip("n_elem:Q", title="elements", format=","),
-                alt.Tooltip("us:Q", title="µs / call", format=".2f"),
+                alt.Tooltip(shorthand="operation:N"),
+                alt.Tooltip(shorthand="series:N", title="protocol"),
+                alt.Tooltip(shorthand="n_elem:Q", title="elements", format=","),
+                alt.Tooltip(shorthand="us:Q", title="µs / call", format=".2f"),
             ],
         )
         .properties(width=300, height=250)
-        .facet(column=alt.Column("operation:N", sort=LATENCY_OPS, title=None))
+        .facet(
+            column=alt.Column(
+                shorthand="operation:N",
+                sort=LATENCY_OPS,
+                title=None,
+                header=alt.Header(labelFont="monospace"),
+            )
+        )
         .properties(
             title=alt.Title(
-                "How you time a call changes the answer",
+                text="How you time a call changes the answer",
                 subtitle="fp32 on an A100-80GB · cold operands · result allocated every call",
             )
         )
     )
-    return Figure(chart, timer_floor(d), "Table view · smallest-size call times")
+    return Figure(
+        chart, table=timer_floor(d), label="Table view · smallest-size call times"
+    )
