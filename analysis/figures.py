@@ -2006,7 +2006,7 @@ def cpu_framework_table(d: AnalysisData) -> pl.DataFrame:
         .pivot(on="runtime", index="operation", values="us")
         .with_columns(
             (pl.col(name="NumPy eager") / pl.col(name="JAX JIT")).alias(
-                name="NumPy/JAX time"
+                name="NumPy / JAX time"
             )
         )
         .sort(
