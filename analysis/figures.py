@@ -1149,7 +1149,7 @@ def float16_curve(d: AnalysisData) -> Figure:
         legend=None,
         scale=alt.Scale(
             domain=F16_ORDER,
-            range=[P["series"][1], P["series"][0], P["shade"], P["ink2"]],  # ty: ignore[invalid-argument-type]
+            range=[P["series"][i] for i in (2, 3, 1, 0)],
         ),
     )
     lines: alt.Chart = (
@@ -1397,8 +1397,8 @@ def dtype_grid(d: AnalysisData) -> Figure:
                 sort=DTYPE_NAMED,
                 scale=alt.Scale(
                     domain=DTYPE_NAMED,
-                    # float16 keeps the aqua it has in Lesson 5's other charts.
-                    range=[P["series"][0], P["series"][1], P["violet"], P["series"][2]],  # ty: ignore[invalid-argument-type]
+                    # float16 keeps the slot it has in Lesson 5's other charts.
+                    range=[P["series"][i] for i in (0, 1, 3, 2)],
                 ),
                 legend=alt.Legend(
                     title=None, columns=1, labelFontSize=16, titleFontSize=16

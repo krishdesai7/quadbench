@@ -14,8 +14,10 @@ from IPython.display import HTML, display
 
 FONT = 'Cochineal, system-ui, -apple-system, "Segoe UI", sans-serif'
 
-# Categorical slots are used in fixed order: blue, orange, aqua.  They are the
-# validated reference palette's first three slots.
+# Categorical slots are used in fixed order: blue, oxblood, green, cerulean.
+# Muted to sit on the cream notebook surface; every pair of the four was checked
+# for separation under protan, deutan, and tritan simulation (OKLab ΔE ≥ 9) and
+# normal vision.
 P: dict[str, list[str] | str] = {
     "transparent": "transparent",
     "ink": "#0b0b0b",
@@ -23,20 +25,18 @@ P: dict[str, list[str] | str] = {
     "muted": "#898781",
     "grid": "#e1e0d9",
     "axis": "#c3c2b7",
-    "series": ["#2a78d6", "#eb6834", "#1baf7a"],
-    # The reference palette's violet slot: the fourth hue when a chart needs one.
-    # Yellow (the next slot) is too close to orange when every pair can meet.
-    "violet": "#4a3aa7",
-    "shade": "#9ec5f4",
+    "series": ["#2a5aab", "#883327", "#3e8343", "#349ab6"],
     "context": "#c3c2b7",
+    # Sequential: the series blue's hue (OKLCH 260), light to dark; step 4 is
+    # series[0] itself.
     "ramp": [
-        "#cde2fb",
-        "#9ec5f4",
-        "#6da7ec",
-        "#3987e5",
-        "#256abf",
-        "#184f95",
-        "#0d366b",
+        "#cfdff9",
+        "#a4bfeb",
+        "#759cdc",
+        "#4c7bc8",
+        "#2a5aab",
+        "#1f4584",
+        "#17315d",
     ],
 }
 
@@ -186,8 +186,8 @@ def show(*figures: Figure) -> None:
 
 def memory_layout() -> HTML:
     """Diagram: a list of pointers to boxed floats against one block of raw values."""
-    orange: str = P["series"][1]
-    blue: str = P["series"][0]
+    boxed: str = P["series"][1]
+    raw: str = P["series"][0]
     ink: str = cast(typ=str, val=P["ink"])
     ink2: str = cast(typ=str, val=P["ink2"])
     grid: str = cast(typ=str, val=P["grid"])
@@ -219,17 +219,17 @@ def memory_layout() -> HTML:
     for i, (hx, hy) in enumerate(iterable=heap):
         x: int = x0 + i * cell
         parts.append(
-            f"<rect x='{x}' y='26' width='{cell - 4}' height='34' rx='4' fill='none' stroke='{orange}' stroke-width='2'/>"
+            f"<rect x='{x}' y='26' width='{cell - 4}' height='34' rx='4' fill='none' stroke='{boxed}' stroke-width='2'/>"
         )
         parts.append(
-            f"<circle cx='{x + (cell - 4) / 2}' cy='43' r='4' fill='{orange}'/>"
+            f"<circle cx='{x + (cell - 4) / 2}' cy='43' r='4' fill='{boxed}'/>"
         )
         parts.append(
             f"<path d='M{x + (cell - 4) / 2},47 L{hx + 45},{hy - 2}' stroke='{ink2}' stroke-width='1.2' "
             "fill='none' marker-end='url(#arrow)'/>"
         )
         parts.append(
-            f"<rect x='{hx}' y='{hy}' width='120' height='30' rx='4' fill='{orange}' fill-opacity='0.14' stroke='{orange}' stroke-width='1.5'/>"
+            f"<rect x='{hx}' y='{hy}' width='120' height='30' rx='4' fill='{boxed}' fill-opacity='0.14' stroke='{boxed}' stroke-width='1.5'/>"
         )
         parts.append(
             f"<text x='{hx + 8}' y='{hy + 19}' font-size='11' fill='{ink2}'><tspan font-family='monospace'>ref · type · </tspan><tspan font-weight='600' fill='{ink}'>{values[i]}</tspan></text>"
@@ -246,7 +246,7 @@ def memory_layout() -> HTML:
     for i, value in enumerate(iterable=values):
         x: int = x0 + 60 + i * cell
         parts.append(
-            f"<rect x='{x}' y='306' width='{cell}' height='40' fill='{blue}' fill-opacity='0.14' stroke='{blue}' stroke-width='1.5'/>"
+            f"<rect x='{x}' y='306' width='{cell}' height='40' fill='{raw}' fill-opacity='0.14' stroke='{raw}' stroke-width='1.5'/>"
         )
         parts.append(
             f"<text x='{x + cell / 2}' y='331' font-size='13' font-weight='600' text-anchor='middle' fill='{ink}'>{value}</text>"
