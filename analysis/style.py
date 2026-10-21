@@ -6,8 +6,8 @@ every chart in the notebook shares one look without per-chart configuration.
 
 from __future__ import annotations
 
-import base64
 import io
+import re
 from typing import NamedTuple, cast
 
 import altair as alt
@@ -172,20 +172,28 @@ def _has_bars(spec: object) -> bool:
     return False
 
 
-def _with_png(chart: alt.TopLevelMixin) -> dict[str, str]:
-    """Return the chart's interactive HTML plus a static PNG fallback.
+def _with_svg(chart: alt.TopLevelMixin) -> HTML:
+    """Return the chart's interactive embed with a static SVG inside its div.
 
-    GitHub strips ``<script>`` from notebook outputs, so the Vega-Embed HTML
-    renders as nothing there; viewers that can't run it fall back to the PNG.
+    GitHub strips ``<script>`` from notebook outputs but keeps inline SVG, so
+    the SVG is what shows there. Where the script runs, Vega-Embed clears the
+    div and draws the interactive chart in its place.
     """
     bundle = chart._repr_mimebundle_()
-    data = cast(
+    html = cast(
         typ=dict[str, str], val=bundle[0] if isinstance(bundle, tuple) else bundle
-    ).copy()
-    buffer = io.BytesIO()
-    chart.save(buffer, format="png", scale_factor=1.5)
-    data["image/png"] = base64.b64encode(buffer.getvalue()).decode()
-    return data
+    )["text/html"]
+    buffer = io.StringIO()
+    chart.save(buffer, format="svg")
+    svg = buffer.getvalue()
+    return HTML(
+        data=re.sub(
+            r'(<div id="altair-viz-\w+">)</div>',
+            lambda m: m[1] + svg + "</div>",
+            html,
+            count=1,
+        )
+    )
 
 
 def show(*figures: Figure) -> None:
@@ -198,7 +206,7 @@ def show(*figures: Figure) -> None:
     for figure in figures:
         chart = figure.chart
         live = chart if _has_bars(chart.to_dict()) else chart.interactive()  # ty: ignore[unresolved-attribute]
-        display(_with_png(live), raw=True)
+        display(_with_svg(live))
         if figure.table is not None:
             display(_table_view(figure.table, figure.label))
 
