@@ -172,6 +172,26 @@ def _has_bars(spec: object) -> bool:
     return False
 
 
+def _unclip_text(spec: object) -> None:
+    """Stop text marks (end-of-line labels) being clipped to the plot area.
+
+    Binding scales for zoom and pan clips every layer to the plot rectangle,
+    which cuts off labels placed beside the data. An explicit ``clip: false``
+    on the mark overrides that.
+    """
+    if isinstance(spec, dict):
+        mark = spec.get("mark")
+        if mark == "text":
+            spec["mark"] = {"type": "text", "clip": False}
+        elif isinstance(mark, dict) and mark.get("type") == "text":
+            mark["clip"] = False
+        for value in spec.values():
+            _unclip_text(value)
+    elif isinstance(spec, list):
+        for value in spec:
+            _unclip_text(value)
+
+
 def _with_svg(chart: alt.TopLevelMixin) -> HTML:
     """Return the chart's interactive embed with a static SVG inside its div.
 
@@ -205,7 +225,14 @@ def show(*figures: Figure) -> None:
     """
     for figure in figures:
         chart = figure.chart
-        live = chart if _has_bars(chart.to_dict()) else chart.interactive()  # ty: ignore[unresolved-attribute]
+        spec = chart.to_dict()
+        if _has_bars(spec):
+            live = chart
+        else:
+            live = chart.interactive()  # ty: ignore[unresolved-attribute]
+            spec = live.to_dict()
+            _unclip_text(spec)
+            live = alt.Chart.from_dict(spec)
         display(_with_svg(live))
         if figure.table is not None:
             display(_table_view(figure.table, figure.label))
