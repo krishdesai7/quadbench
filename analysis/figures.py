@@ -1172,6 +1172,8 @@ def float16_curve(d: AnalysisData) -> Figure:
         .properties(
             width=480,
             height=300,
+            # Room for the end-of-line labels, which sit right of the plot area
+            padding={"left": 6, "right": 100, "top": 6, "bottom": 6},
             title=alt.Title(
                 text="On CPU, float16 never gets cheaper with size and stays far slower than float32",
                 subtitle="NumPy add · same operands every call, preallocated result",
