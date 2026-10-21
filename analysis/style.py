@@ -6,6 +6,8 @@ every chart in the notebook shares one look without per-chart configuration.
 
 from __future__ import annotations
 
+import base64
+import io
 from typing import NamedTuple, cast
 
 import altair as alt
@@ -170,6 +172,22 @@ def _has_bars(spec: object) -> bool:
     return False
 
 
+def _with_png(chart: alt.TopLevelMixin) -> dict[str, str]:
+    """Return the chart's interactive HTML plus a static PNG fallback.
+
+    GitHub strips ``<script>`` from notebook outputs, so the Vega-Embed HTML
+    renders as nothing there; viewers that can't run it fall back to the PNG.
+    """
+    bundle = chart._repr_mimebundle_()
+    data = cast(
+        typ=dict[str, str], val=bundle[0] if isinstance(bundle, tuple) else bundle
+    ).copy()
+    buffer = io.BytesIO()
+    chart.save(buffer, format="png", scale_factor=1.5)
+    data["image/png"] = base64.b64encode(buffer.getvalue()).decode()
+    return data
+
+
 def show(*figures: Figure) -> None:
     """Display each chart followed by its collapsed table view.
 
@@ -179,7 +197,8 @@ def show(*figures: Figure) -> None:
     """
     for figure in figures:
         chart = figure.chart
-        display(chart if _has_bars(chart.to_dict()) else chart.interactive())  # ty: ignore[unresolved-attribute]
+        live = chart if _has_bars(chart.to_dict()) else chart.interactive()  # ty: ignore[unresolved-attribute]
+        display(_with_png(live), raw=True)
         if figure.table is not None:
             display(_table_view(figure.table, figure.label))
 
